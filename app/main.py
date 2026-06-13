@@ -22,6 +22,7 @@ from app.engine import mastery, coach, diagnostic, recommend
 from app import quiz, config, tools, content, formulas
 from app.coaching.ai_provider import get_provider
 from app.coaching import journal as journal_mod, usage as usage_mod, corpus as corpus_mod
+from app.coaching import explain_batch
 
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
@@ -198,20 +199,30 @@ def api_attempt(req: AttemptRequest):
 
 @app.post("/api/explain")
 def api_explain(req: ExplainRequest):
-    """On-demand AI explanation of a question/miss (falls back to a stub when the
-    AI budget is reached or no key is set). Grounding corpus arrives in Phase 5.3."""
+    """Cache-first (§6f): return the batch-generated structured layers if present,
+    with adaptive reveal depth from the user's §6d tier. Falls back to a live
+    explain() call (stub when over budget / no key) only if none is stored."""
     conn = connect()
     try:
         q = queries.get_question(conn, req.question_id, with_answer=True)
         if q is None:
             raise HTTPException(404, "unknown question id")
+        layers = explain_batch.get_explanation(conn, req.question_id)
+        if layers is not None:
+            by_section = mastery.compute_section_mastery(conn)
+            diagnostic.apply_diagnostic_tiers(conn, by_section)
+            tier = by_section[q["section"]]["tier"]
+            default_layers = explain_batch.DEPTH_LAYERS.get(
+                tier, explain_batch.DEPTH_LAYERS[None])
+            return {"source": "batch", "tier": tier,
+                    "default_layers": default_layers, "layers": layers}
+        grounding = corpus_mod.ground_for_section(q["section"])
     finally:
         conn.close()
-    grounding = corpus_mod.ground_for_section(q["section"])  # RIC/RBR for regs sections
+    # live fallback (no stored explanation yet)
     result = get_provider().explain(
-        question=q, chosen_index=req.chosen_index, grounding=grounding
-    )
-    return {"text": result.text, "degraded": result.degraded,
+        question=q, chosen_index=req.chosen_index, grounding=grounding)
+    return {"source": "live", "text": result.text, "degraded": result.degraded,
             "model": result.model, "cost_usd": round(result.cost_usd, 6)}
 
 

@@ -130,7 +130,7 @@ function showFeedback(chosen, res) {
     explainBtn.textContent = "Explaining…";
     try {
       const r = await api("/api/explain", { question_id: q.id, chosen_index: chosen });
-      out.textContent = r.text + (r.degraded ? "  (AI off — set an API key for a tailored explanation)" : "");
+      renderExplanation(out, r);
     } catch (e) {
       out.textContent = "Could not get an explanation: " + e.message;
     }
@@ -248,8 +248,51 @@ function fmtTime(s) {
 
 function escapeHtml(s) {
   const d = document.createElement("div");
-  d.textContent = s;
+  d.textContent = s == null ? "" : s;
   return d.innerHTML;
+}
+
+// Render a structured (batch) explanation with adaptive reveal, or a live text blob.
+function renderExplanation(container, r) {
+  container.innerHTML = "";
+  if (r.source !== "batch" || !r.layers) {
+    container.textContent =
+      (r.text || "") + (r.degraded ? "  (AI off — set an API key for a tailored explanation)" : "");
+    return;
+  }
+  const L = r.layers;
+  const shown = new Set(r.default_layers || ["core"]);
+  const layer = (key, label, inner) => {
+    if (!inner) return;
+    const d = document.createElement("div");
+    d.className = "exp-layer" + (shown.has(key) ? "" : " exp-extra hidden");
+    d.innerHTML = (label ? `<span class="exp-label">${label}</span> ` : "") + inner;
+    container.appendChild(d);
+  };
+  layer("core", "", escapeHtml(L.core));
+  if (L.distractors && L.distractors.length) {
+    const items = L.distractors
+      .map((x) => `<li><b>${escapeHtml(x.option)}</b> — ${escapeHtml(x.why_wrong)} <em>(${escapeHtml(x.why_tempting)})</em></li>`)
+      .join("");
+    layer("distractors", "Why the others are wrong", `<ul class="exp-list">${items}</ul>`);
+  }
+  layer("concept", "Concept", escapeHtml(L.concept));
+  layer("misconception", "Watch out", escapeHtml(L.misconception));
+  if (L.link) layer("link", "Revisit", escapeHtml(L.link));
+  if (L.mnemonic) layer("mnemonic", "Mnemonic", escapeHtml(L.mnemonic));
+  if (L.edge_cases) layer("edge_cases", "Edge cases", escapeHtml(L.edge_cases));
+
+  const extras = container.querySelectorAll(".exp-extra");
+  if (extras.length) {
+    const more = document.createElement("button");
+    more.className = "btn explain-btn";
+    more.textContent = "Go deeper ▾";
+    more.onclick = () => {
+      extras.forEach((e) => e.classList.remove("hidden"));
+      more.remove();
+    };
+    container.appendChild(more);
+  }
 }
 
 start();

@@ -12,11 +12,13 @@ and as the fallback). The batch submit/poll/write pipeline is added after sign-o
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 import anthropic
 
 from app import config
-from app.coaching import prompts, corpus
+from app.coaching import prompts, corpus, usage as usage_mod
+from app.db.queries import questions_for_ids  # noqa: F401  (kept for callers)
 
 # Structured-output schema for one explanation (spec §6f.2 superset).
 LAYER_SCHEMA = {
@@ -86,3 +88,139 @@ def generate_one(client, question: dict, grounding: str = "", model: str | None 
     )
     text = "".join(b.text for b in resp.content if b.type == "text")
     return json.loads(text), resp.usage
+
+
+# Default reveal depth by §6d depth tier (adaptive reveal, free — spec §6f.5).
+DEPTH_LAYERS = {
+    "test-out": ["core"],
+    "light": ["core", "misconception"],
+    "standard": ["core", "distractors", "misconception"],
+    "deep": ["core", "distractors", "concept", "misconception", "link", "mnemonic", "edge_cases"],
+    None: ["core", "distractors", "concept", "misconception"],  # unrated → generous default
+}
+
+
+# --- batch pipeline ---------------------------------------------------------
+def _question_rows(conn):
+    return conn.execute(
+        "SELECT id, section, subsection, text, options, correct_index, bank_version "
+        "FROM questions ORDER BY id"
+    ).fetchall()
+
+
+def build_requests(conn, model: str) -> list[dict]:
+    """One Message Batches request per question. Regs sections carry cached RIC/RBR
+    grounding; electronics/antenna carry only the (tiny) style prompt."""
+    reqs = []
+    for r in _question_rows(conn):
+        question = {
+            "id": r["id"], "section": r["section"], "subsection": r["subsection"],
+            "text": r["text"], "options": json.loads(r["options"]),
+            "correct_index": r["correct_index"],
+        }
+        grounding = corpus.ground_for_section(r["section"])
+        sys = [{"type": "text", "text": prompts.system_prompt("batch_explain")}]
+        if grounding:
+            sys.append({
+                "type": "text",
+                "text": "Reference material (grounding only, do not copy):\n" + grounding,
+                "cache_control": {"type": "ephemeral", "ttl": "1h"},
+            })
+        reqs.append({
+            "custom_id": r["id"],
+            "params": {
+                "model": model,
+                "max_tokens": MAX_TOKENS,
+                "system": sys,
+                "messages": [{"role": "user", "content": user_block(question)}],
+                "output_config": {"format": {"type": "json_schema", "schema": LAYER_SCHEMA}},
+            },
+        })
+    return reqs
+
+
+def submit(conn, model: str | None = None) -> str:
+    """Submit the full bank as one batch; record the id in meta. Returns batch id."""
+    model = model or config.AI_MODELS.get("explain", config.AI_MODEL)
+    client = _client()
+    batch = client.messages.batches.create(requests=build_requests(conn, model))
+    conn.execute(
+        "INSERT INTO meta(key,value) VALUES('explain_batch_id', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (batch.id,))
+    conn.execute(
+        "INSERT INTO meta(key,value) VALUES('explain_batch_model', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (model,))
+    conn.commit()
+    return batch.id
+
+
+def status(batch_id: str) -> str:
+    return _client().messages.batches.retrieve(batch_id).processing_status
+
+
+def collect(conn, batch_id: str, model: str) -> dict:
+    """Write succeeded results into `explanations`; return coverage + cost stats."""
+    client = _client()
+    ok = err = 0
+    cost = 0.0
+    now = datetime.now(timezone.utc).isoformat()
+    for res in client.messages.batches.results(batch_id):
+        if res.result.type != "succeeded":
+            err += 1
+            continue
+        msg = res.result.message
+        bank_version = conn.execute(
+            "SELECT bank_version FROM questions WHERE id=?", (res.custom_id,)
+        ).fetchone()
+        if bank_version is None:
+            err += 1
+            continue
+        bv = bank_version["bank_version"]
+        text = "".join(b.text for b in msg.content if b.type == "text")
+        try:
+            layers = json.loads(text)
+        except json.JSONDecodeError:
+            err += 1
+            continue
+        conn.execute(
+            "INSERT INTO explanations(question_id,bank_version,model,layers,generated_at) "
+            "VALUES (?,?,?,?,?) ON CONFLICT(question_id,bank_version) DO UPDATE SET "
+            "model=excluded.model, layers=excluded.layers, generated_at=excluded.generated_at",
+            (res.custom_id, bv, model, json.dumps(layers, ensure_ascii=False), now))
+        ok += 1
+        u = msg.usage
+        cost += usage_mod.estimate_cost(
+            model,
+            getattr(u, "input_tokens", 0) or 0,
+            getattr(u, "output_tokens", 0) or 0,
+            getattr(u, "cache_read_input_tokens", 0) or 0,
+            getattr(u, "cache_creation_input_tokens", 0) or 0,
+        ) * 0.5  # Batch API is 50% off
+    conn.commit()
+    total = conn.execute("SELECT COUNT(*) c FROM questions").fetchone()["c"]
+    have = conn.execute("SELECT COUNT(*) c FROM explanations").fetchone()["c"]
+    return {"written_ok": ok, "errors": err, "have": have, "total": total,
+            "coverage_pct": round(100.0 * have / total, 1) if total else 0.0,
+            "est_batch_cost_usd": round(cost, 2)}
+
+
+def get_explanation(conn, question_id: str, bank_version: str | None = None):
+    """Cache-first read of stored layers for a question. None if not generated."""
+    if bank_version:
+        row = conn.execute(
+            "SELECT layers FROM explanations WHERE question_id=? AND bank_version=?",
+            (question_id, bank_version)).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT layers FROM explanations WHERE question_id=? ORDER BY generated_at DESC LIMIT 1",
+            (question_id,)).fetchone()
+    return json.loads(row["layers"]) if row else None
+
+
+def _client():
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+    except Exception:
+        pass
+    return anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)

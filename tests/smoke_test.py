@@ -163,7 +163,10 @@ def main() -> None:
     from app.coaching import usage as usagemod
     assert isinstance(get_provider(), StubProvider)
     ex = c.post("/api/explain", json={"question_id": served[0], "chosen_index": 0}).json()
-    assert ex["degraded"] is True and ex["text"] and ex["cost_usd"] == 0
+    if ex["source"] == "batch":                      # stored explanation present
+        assert ex["layers"]["core"] and "default_layers" in ex
+    else:                                            # live fallback (stub-forced)
+        assert ex["degraded"] is True and ex["text"] and ex["cost_usd"] == 0
     assert usagemod.estimate_cost("claude-opus-4-8", 1_000_000, 1_000_000) == 30.0  # $5 + $25
     ok, mtd = usagemod.within_budget(conn)
     assert ok and mtd == 0.0

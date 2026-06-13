@@ -256,7 +256,12 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .feedback.good { color: var(--ok); }
 .feedback.bad { color: var(--bad); }
 .explain-btn { margin-top: var(--sp-2); font-size: 0.8rem; padding: var(--sp-1) var(--sp-3); }
-.explain-out { margin-top: var(--sp-2); line-height: 1.5; white-space: pre-wrap; }
+.explain-out { margin-top: var(--sp-2); line-height: 1.5; }
+.exp-layer { margin: var(--sp-2) 0; }
+.exp-label { font-weight: 700; color: var(--accent); margin-right: 0.3rem; }
+.exp-list { margin: var(--sp-1) 0 0; padding-left: 1.2rem; }
+.exp-list li { margin: 0.2rem 0; }
+.exp-list em { color: var(--muted); font-style: italic; }
 .card-actions { margin-top: var(--sp-4); display: flex; gap: var(--sp-3); }
 
 /* results */

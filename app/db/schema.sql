@@ -97,6 +97,18 @@ CREATE TABLE IF NOT EXISTS recommendation (
     payload       TEXT NOT NULL            -- JSON: readiness, next_session, review_queue, rationale
 );
 
+-- batch-generated structured explanations (spec §6f). One row per question per
+-- bank_version; `layers` is the structured-JSON superset (core/distractors/concept/
+-- misconception/link/mnemonic/edge_cases). explain() reads this cache-first.
+CREATE TABLE IF NOT EXISTS explanations (
+    question_id   TEXT NOT NULL REFERENCES questions(id),
+    bank_version  TEXT NOT NULL,
+    model         TEXT NOT NULL,
+    layers        TEXT NOT NULL,            -- JSON superset
+    generated_at  TEXT NOT NULL,
+    PRIMARY KEY (question_id, bank_version)
+);
+
 -- index of narrative journal entries (markdown lives on disk, exportable to Obsidian).
 CREATE TABLE IF NOT EXISTS journal (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
