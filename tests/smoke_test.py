@@ -121,6 +121,13 @@ def main() -> None:
     bs = compute_section_mastery(conn)
     assert "fresh_pct" in bs[5] and "tier" in bs[5]
 
+    # adaptive Elo/IRT-lite — deterministic θ + difficulty
+    from app.engine import adaptive
+    t1, b1 = adaptive.compute_ability_difficulty(conn)
+    t2, b2 = adaptive.compute_ability_difficulty(conn)
+    assert t1 == t2 and b1 == b2, "adaptive not deterministic"
+    assert len(adaptive.select_drill(conn, 5, 10)) == 10
+
     # formula-sheet trainer
     ft = c.get("/formula-trainer")
     assert ft.status_code == 200

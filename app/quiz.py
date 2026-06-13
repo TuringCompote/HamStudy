@@ -14,7 +14,7 @@ from __future__ import annotations
 import random
 
 from app.db import queries
-from app.engine import scheduler
+from app.engine import scheduler, adaptive
 
 MOCK_EXAM_SIZE = 100
 DEFAULT_DRILL_SIZE = 20
@@ -38,12 +38,9 @@ def allocate_proportional(sizes: dict[int, int], total: int) -> dict[int, int]:
 
 def build_drill(conn, section: int, count: int = DEFAULT_DRILL_SIZE,
                 rng: random.Random | None = None) -> list[dict]:
-    """`count` random questions from one section (no answers in payload)."""
-    rng = rng or random.Random()
-    pool = queries.section_question_ids(conn, section)
-    if not pool:
-        return []
-    chosen = rng.sample(pool, min(count, len(pool)))
+    """`count` questions from one section, chosen by the adaptive selector
+    (θ-aware + coverage-aware; random only at cold start). No answers in payload."""
+    chosen = adaptive.select_drill(conn, section, count, rng=rng)
     return queries.questions_for_ids(conn, chosen)
 
 
