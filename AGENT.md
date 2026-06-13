@@ -1,64 +1,79 @@
-# AGENT.md — Build-agent operating manual
+# AGENT.md — operating manual for Elmer
 
-> **Copy or symlink this file to `CLAUDE.md`** so Claude Code auto-loads it as project
-> instructions. It is the same content either way — this project is tool-portable.
+> Build-agent instructions. `CLAUDE.md` imports this so Claude Code auto-loads it.
+> Start here + `README.md` (what it is / how to run & deploy) + `constitution.md`
+> (non-negotiable principles). v1 is built and deployed; this describes how it's put
+> together and how to extend it safely.
 
-## What this project is
-**App name: `Elmer`** (store as a single `APP_NAME` config constant + page `<title>`; never
-hardcode it — keep it one-line changeable). **Visual direction: "instrument panel"** — calm
-neutral base (light+dark), one phosphor accent (teal/amber), mono font for numbers/IDs/
-formula values, clean sans for body, per-section mastery as a segmented S-meter colored by
-adaptive tier. Define all design tokens once in `tokens.css`; every SVG concept tool themes
-from those variables. Lightweight CSS only — no heavy framework.
+## What this is
+A single-user, self-hosted trainer for the **ISED Basic Amateur Radio Qualification,
+targeting Basic with Honours (80%)** for the user (Chris, Alberta). App name **`Elmer`**
+(stored once as `config.APP_NAME`; never hardcode it). Visual direction: "instrument
+panel" — neutral light/dark base, one phosphor accent, mono for numbers/IDs/formulas,
+per-section mastery as a segmented S-meter colored by depth tier. All design tokens live
+in `app/static/tokens.css`; every SVG tool themes from them.
 
-A single-user, self-hosted training system to get the user (Chris, Alberta) through the
-**ISED Basic Amateur Radio Qualification, targeting Basic with Honours (80%)**. Two parts
-that share one SQLite store: an **interactive web app** (the learning surface) and a
-**coaching layer folded into that app** (deterministic engine + Anthropic API for
-explanation/narrative). Full detail: `ham-radio-training-build-spec.md` (read §0 first).
+## Locked stack (don't change without the user)
+- **FastAPI (Python) + SQLite + vanilla JS/SVG**, single Docker container. No
+  Next/Svelte, no Postgres, no heavy CSS framework.
+- **AI = Anthropic API behind `app/coaching/ai_provider.AIProvider`** (`explain` /
+  `diagnose` / `narrate` / `condense`). Key from `ANTHROPIC_API_KEY` (env/`.env`,
+  never committed). A `StubProvider` is the offline/over-budget fallback — keep it working.
 
-## Read these before doing anything
-1. `ham-radio-training-build-spec.md` — the master brief. **§0 records decisions that
-   override any conflicting prose later in the file.**
-2. `constitution.md` — non-negotiable principles. When unsure, these decide.
-3. `BACKLOG.md` — the phased task list. Work phases in order.
-4. `QUESTIONS.md` — what's settled and what's still open. Don't re-litigate settled items;
-   don't guess on open ones that block you — ask.
+## The deterministic-vs-AI split (the most important rule)
+- **Deterministic engine (`app/engine/*`) — no LLM, no randomness in analysis, idempotent.**
+  Same `attempts` ⇒ same output. Owns: mastery + fresh-accuracy (`mastery.py`), ability θ /
+  difficulty (`adaptive.py`), spaced repetition (`scheduler.py`, Leitner), depth tiers +
+  diagnostic placement (`mastery.depth_tier`, `diagnostic.py`), trend / miss analysis
+  (`analysis.py`), readiness + coverage guarantee (`readiness.py`), and the
+  `recommendation.json` the dashboard reads (`recommend.py`). Question *selection* may use
+  randomness (it's not analysis); scoring/tier/scheduling/readiness may not.
+- **AI layer (`app/coaching/*`) — generative only.** Explanations, misconception
+  diagnosis, journal narrative, lesson condensation. Nondeterminism is expected here. It
+  **never** feeds the mastery/scheduling/readiness math.
 
-## Where to build what
-- **Cowork:** Phase 0 research/ground-truthing, and the optional thin deep-dive skill.
-- **Claude Code:** the app build, Phases 1–7 (iterative multi-file code, git, run/test).
+## Key decisions in force
+- **Readiness = ≥80% fresh-question accuracy in every section AND every subsection probed.**
+  Both required before "book the exam."
+- **Models:** the one-time explanation **batch ran on Opus** (best quality, cache-first DB
+  reads forever). **Live calls route off Opus** (user is credit-limited): Sonnet for
+  reasoning (explain-fallback / diagnose / condense), Haiku for narrate. All in
+  `config.AI_MODELS`, env-overridable per type.
+- **Budget guard:** every live call logs tokens+cost to `usage` and checks month-to-date vs
+  `AI_MONTHLY_BUDGET_USD` (default $15); over budget ⇒ stub. Batch is a build step and is
+  NOT counted against this — gate batch spend with the Console limit instead.
+- **Original text only.** Lessons (`app/content/sections/*.md`) and AI output are original;
+  reference docs (RIC-3/RBR-4/RIC-1, in the curated corpus) ground accuracy but are never
+  reproduced. Cite freely-usable Gov works (RBR-4 §X) only when present in the grounding.
+- **Bank:** parsed from the official ISED PDF (two-column aware parser); `bank_version`
+  derived from the PDF title page. English-only.
 
-## Locked technical decisions (do not change without the user)
-- Stack: **FastAPI (Python) + SQLite + vanilla JS / SVG client**, single container.
-  HTMX allowed for the app shell. No Next/Svelte, no Postgres.
-- AI: **Anthropic API** behind an `AIProvider` interface (`explain` / `diagnose` /
-  `narrate`). API key from env/secrets — **never commit a key**. Keep a stub/local impl
-  swappable behind the same interface.
-- Data: SQLite on NAS-backed volume; LAN/VPN-only; back up to NAS.
+## How to extend
+- **Add a concept tool:** drop `app/static/tools/<id>.js` (calls `Elmer.register("<id>", fn)`,
+  themes from tokens), register it in `app/tools.py` (`TOOLS` + `SECTION_TOOLS`).
+- **Add/adjust an AI call:** add a method on `AIProvider` + `AnthropicProvider` + `StubProvider`;
+  externalize the prompt as `prompts/<type>.md` (Console-tunable, loaded by `prompts.py`);
+  route the model in `config.AI_MODELS`; it auto-inherits the budget guard + grounding.
+- **Bank update (≈yearly):** `fetch_sources` → `ingest` → `validate`, then re-run the
+  explanation batch (`explain_batch.submit/collect`) for the new `bank_version` and
+  re-export the seed. Trim the RIC grounding / chunk the batch first to control cost +
+  rate limits; prefer Opus only if credits allow.
+- Always run `python tests/smoke_test.py` (forces the stub — never spends) before committing.
 
 ## Conventions
-- **Spec-driven per phase:** short spec → plan → tasks → implement. Small, committed steps.
-- **Append to `LOG.md`** every working session: date, what was done, decisions, next step.
-- Data model lives in spec §7. `attempts` is **append-only** — never delete or mutate rows.
-- The deterministic engine must be **idempotent**: same `attempts` ⇒ same `recommendation`.
-  No LLM calls, no randomness in that path. (LLM is only in the AI layer.)
-- Lesson text is **original** — never paste community-course prose. Cite/link sources for
-  the user instead.
-- Always record and surface `bank_version`. Re-ingest by upsert on `id`.
+- Spec-driven, small committed steps. Append a dated entry to `LOG.md` each session.
+- `attempts` is append-only — never delete/mutate. Re-ingest upserts `questions` by `id`.
+- Read paths/secrets from `config.py`/env — no hardcoded keys, hostnames, or ports.
 
-## What NOT to touch / do
-- Don't redistribute or republish community course PDFs inside the app.
+## What NOT to do
 - Don't put an LLM in the mastery/trend/scheduling/readiness path.
-- Don't drop or rewrite `attempts` history on re-ingest or recompute.
-- Don't add multi-user/auth/public-hosting complexity — single-user behind the homelab.
-- Don't expand scope to Advanced Qualification or Morse before Basic-with-Honours ships.
-- Don't hardcode secrets, hostnames, or the Obsidian path — read from config; open
-  deployment specifics are in `QUESTIONS.md`.
+- Don't drop `attempts` or the `explanations` seed (the seed is the portable batch asset —
+  losing it means a paid re-batch).
+- Don't reproduce community-course prose; don't add multi-user/auth/public hosting; don't
+  expand to Advanced Qualification or Morse before the user asks.
 
-## Definition of done (v1)
-The user can, locally: pick a syllabus section → learn it with an interactive tool → drill
-the real bank questions; run a full 100-question mock (70% and 80% lines shown); have missed
-questions resurface via spaced repetition; and see a dashboard "today's session" produced by
-the deterministic engine, with on-demand Claude explanations and an auto-written journal.
-Readiness fires when fresh-question accuracy holds ≥80% across all 8 sections.
+## Deploy & ops (recap; full steps in README)
+- `deploy/install.sh` = one-shot LXC install (Docker + DB rebuild from seed + start + systemd
+  boot unit). `docker-compose.yml` mounts `data/` (durable) and `app/static|templates|content`
+  (live UI). `app/db/backup.py` = WAL-safe NAS backup (cron). UI change → `git pull`
+  (+`restart` for templates); Python change → `up -d --build`.

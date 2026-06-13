@@ -1,129 +1,119 @@
-# HamStudy — Canadian Amateur Radio (Basic with Honours) training system
+# Elmer — Canadian Basic Amateur Radio trainer
 
-A single-user, self-hosted study system targeting the ISED **Basic Amateur Radio
-Qualification with Honours (80%)**. An interactive web app (the learning surface)
-plus a coaching layer — a **deterministic engine** (mastery, trend, spaced
-repetition, adaptive difficulty, readiness; idempotent, no LLM) and an **AI layer**
-(Anthropic API, behind a swappable `AIProvider`) for explanations and journaling.
+A single-user, self-hosted study app to pass the **ISED Basic Amateur Radio
+Qualification with Honours (80%)**. It pairs an interactive learning surface with a
+coaching layer: a **deterministic engine** (mastery, adaptive difficulty, spaced
+repetition, readiness — plain code, no LLM) and a **swappable AI layer** (Anthropic)
+for explanations, misconception diagnosis, and the journal.
 
-> Authoritative docs: `ham-radio-training-build-spec.md` (read §0 first),
-> `constitution.md`, `AGENT.md` (= build-agent manual), `BACKLOG.md`, `LOG.md`.
+Stack: **FastAPI + SQLite + vanilla JS/SVG**, one Docker container, LAN/VPN-only.
 
-## Status
-- **Phase 0–1** — research + data foundation: ingest + SQLite schema, **984/984** validated.
-- **Phase 2** — quiz engine: per-section drill + 100-Q proportional mock (70%/80% lines),
-  `attempts`, deterministic mastery, dashboard.
-- **Phase 3** — 8 interactive SVG concept tools + original lessons + Learn→Interact→Drill.
-- **Phase 4 / 4.5** — spaced repetition (Leitner) + review queue + formula trainer; adaptive
-  engine (diagnostic placement, depth tiers, Elo/IRT-lite θ, coverage guarantee).
-- **Phase 5** — closed loop (`recommendation.json`) + Anthropic AI layer (budget guard,
-  journal, prompts externalized, model routing) + **984 batch-generated structured
-  explanations** with adaptive reveal; readiness = ≥80% fresh/section AND coverage.
-- **Phase 6** — package & deploy (this section). See `BACKLOG.md` / `LOG.md`.
+---
 
-## Stack
-FastAPI (Python) + SQLite + vanilla JS/SVG, shipped as a single container.
-LAN/VPN-only. SQLite on a NAS-backed volume in production.
+## What it does
 
-## Layout
-```
-app/
-  config.py            # paths/settings from env (no hardcoded secrets/hosts)
-  db/
-    schema.sql         # SQLite schema (spec §7)
-    init_db.py         # apply schema (idempotent)
-    ingest.py          # parse official ISED bank PDF -> questions table
-    validate.py        # assert count==984, ids/sections/options sane
-    fetch_sources.py   # re-download source material into references/
-references/            # downloaded ISED material (git-ignored; not redistributed)
-data/                  # SQLite store (git-ignored)
-```
+- **Learn → Interact → Drill** per syllabus section (`/section/{1..8}`): an original
+  short lesson, interactive SVG concept tools, then real ISED bank questions.
+- **8 concept tools** (themed from `tokens.css`): Ohm's law/power, reactance &
+  resonance, decibels, SWR/impedance, wavelength↔frequency, series/parallel R&C,
+  Canadian band-plan explorer, propagation & the ionosphere.
+- **Quiz engine:** per-section drill, **100-question mock exam** (section-proportional,
+  70% pass + 80% Honours lines, timer), and a **spaced-repetition review queue**
+  (Leitner). Every answer is graded server-side and appended to `attempts`.
+- **Adaptive engine:** per-section diagnostic placement → depth tier
+  (test-out / light / standard / deep) via Elo/IRT-lite ability θ; drills serve the
+  ~75% productive zone; a coverage guarantee prevents blind spots.
+- **Dashboard:** exam-readiness %, stat cards, an inline **journal week-strip**, a
+  **"Today's session"** recommendation, and per-section **S-meters** colored by tier.
+- **AI layer:** instant **batch-generated structured explanations** for every
+  question (cache-first, revealed to a depth set by your tier), a live
+  **"why do I keep missing this?"** diagnosis per section, and an AI-written
+  **journal**. All budget-guarded; degrades to deterministic when no key / over budget.
+- **Formula-sheet trainer** (`/formula-trainer`) for the exam-legal unlabelled sheet.
 
-## Setup & data load
+**Readiness ("book the exam") fires only when fresh-question accuracy is ≥80% in
+every one of the 8 sections AND every subsection has been probed.**
+
+---
+
+## Run locally (dev)
+
 ```bash
 pip install -r requirements.txt
 
-# 1. Get the official question bank into references/ (English-only):
-python -m app.db.fetch_sources
-#    (or download manually to references/amateur_basic_questions_en.pdf)
+# Build the DB from the free ISED bank + the committed explanation seed:
+python -m app.db.fetch_sources          # downloads the bank into references/ (English-only)
+python -m app.db.ingest                 # parse -> questions (984), bank_version from the PDF
+python -m app.db.validate               # asserts count==984, ids/sections/options sane
+python -m app.coaching.explain_batch import --path seed/explanations.jsonl
 
-# 2. Create schema + ingest + validate:
-python -m app.db.ingest      # derives bank_version from the PDF title page
-python -m app.db.validate    # exits non-zero if anything is off
+uvicorn app.main:app --reload           # http://127.0.0.1:8000
+python tests/smoke_test.py              # end-to-end check (uses a throwaway DB copy)
 ```
 
-Override locations via env: `HAMSTUDY_DB`, `HAMSTUDY_BANK_PDF`,
-`HAMSTUDY_REFERENCES`.
+`ANTHROPIC_API_KEY` (in a gitignored `.env`) is **optional** — without it the app runs
+on the deterministic engine + the cached explanations; the live diagnose/journal calls
+degrade gracefully. Paths/models are env-overridable (see `app/config.py`).
 
-## Run the app (Phase 2)
-```bash
-uvicorn app.main:app --reload          # http://127.0.0.1:8000
-python tests/smoke_test.py             # end-to-end API check (uses a throwaway DB copy)
-```
-Dashboard `/` shows per-section mastery + coverage and links to drills and the
-100-question mock exam. Per-question grading happens server-side; every answer is
-appended to `attempts`. Correct answers are never sent to the browser in the quiz
-payload — only on submit.
+---
 
-## Deploy (Phase 6) — one container in a Proxmox LXC, LAN/VPN-only
+## Deploy (Proxmox LXC, LAN/VPN-only)
 
-### One-shot install (recommended)
-On a fresh Debian/Ubuntu LXC — clone, run the script, done. It installs Docker, builds the
-image, reconstructs the database from the **free ISED bank + the committed explanation seed**
-(`seed/explanations.jsonl` — no paid re-batch), and starts the app on your port.
+One command on a fresh Debian/Ubuntu LXC — installs Docker, builds the image,
+reconstructs the DB (bank + committed seed, **no paid re-batch**), starts on port 80,
+and registers a systemd unit so it comes up on boot:
 
 ```bash
-git clone <your-repo-url> /opt/elmer
-cd /opt/elmer
+git clone <repo-url> /opt/elmer && cd /opt/elmer
 sudo PORT=80 ./deploy/install.sh
 ```
 
-It prompts once for an Anthropic API key (**optional** — leave blank to run fully on the
-deterministic engine + the cached batch explanations; add it later in `.env` for live
-diagnose/journal). Then reach it at `http://<lxc-ip-or-fqdn>:80` via your local DNS.
-Re-running the script preserves an existing `data/hamstudy.db` (your attempts are never lost).
+Reach it at `http://<lxc-ip-or-fqdn>:80` via local DNS, or over the home VPN. No reverse
+proxy / Cloudflare — restrict at the LXC/VPN layer. Details in `AGENT.md` § Deploy & ops.
 
-The installer also registers a **systemd unit** (`elmer.service`) so the stack starts on
-boot. Manage it with `systemctl status|start|stop elmer` (and `docker compose logs -f`).
+- **UI tweaks** (`app/static`, `app/templates`, `app/content` are mounted): `git pull`
+  applies CSS/JS live; templates need `docker compose restart elmer`.
+- **Code changes** (anything under `app/*.py`): `git pull && docker compose up -d --build`.
+- **Backups:** `python -m app.db.backup --dest /mnt/nas/elmer-backups` (online, WAL-safe;
+  cron example in `AGENT.md`).
+- **Spend:** set a hard monthly limit in the Anthropic Console — the in-app `usage`
+  guard ($15/mo default) covers live calls but not one-time batch generation.
 
-> ⚠️ **`data/hamstudy.db` is your durable state** — questions, the batch explanations, and your
-> append-only `attempts`. The installer rebuilds it only when it's absent; otherwise it's left
-> alone. Back it up to the NAS (below).
+---
 
-### Manual (if you prefer)
-```bash
-$EDITOR .env                       # ANTHROPIC_API_KEY (optional), PORT=80, BIND_IP=<lan-ip>
-docker compose build
-docker compose run --rm elmer sh -c "python -m app.db.fetch_sources && \
-  python -m app.db.ingest && python -m app.db.validate && \
-  python -m app.coaching.explain_batch import --path /app/seed/explanations.jsonl"
-docker compose up -d
-docker compose ps                  # healthcheck hits /api/health
+## Project layout
+
+```
+app/
+  main.py            FastAPI routes + JSON API
+  config.py          env-driven settings (paths, AI models, budget, APP_NAME)
+  tools.py           section -> concept-tool map      formulas.py  formula-trainer data
+  db/                schema.sql · init_db · ingest · validate · fetch_sources · queries · backup
+  engine/            deterministic: mastery · adaptive(θ) · scheduler(Leitner) · readiness
+                     · analysis(trend/miss) · diagnostic(placement) · recommend · coach
+  coaching/          AI: ai_provider(+stub) · anthropic_provider · usage(budget) · corpus(RIC)
+                     · explain_batch(batch+seed) · journal · prompts(loader)
+  content/sections/  original lesson markdown (1–8)
+  static/            tokens.css · style.css · quiz.js · journal.js · tools/*.js
+  templates/         base · dashboard · section · quiz · formula_trainer
+prompts/             explain · diagnose · narrate · condense · batch_explain  (Console-tunable)
+seed/explanations.jsonl   committed batch explanations (portable; rebuilds the DB on deploy)
+deploy/              install.sh · elmer.service          tests/  smoke_test.py
+Dockerfile · docker-compose.yml · requirements.txt
+data/ (gitignored: SQLite, recommendation.json, journal/)   references/ (gitignored downloads)
 ```
 
-Reach it at `http://<lxc-hostname>:<PORT>` on the LAN, or over the home VPN remotely.
-**No reverse proxy / no Cloudflare** — restrict access at the LXC/VPN layer.
+## Core invariants (see `constitution.md`)
 
-**Set a hard spend limit in the Anthropic Console** (Billing → limits, e.g. $15/mo). The
-in-app `usage` budget guard covers live study calls but NOT one-time batch generation.
-
-**Backup the DB to the NAS** (cron on the LXC, online/WAL-safe):
-```bash
-0 3 * * *  cd /opt/elmer && docker compose exec -T elmer python -m app.db.backup --dest /mnt/nas/elmer-backups --keep 30
-```
-
-**Journal → Obsidian:** entries are plain Markdown in `data/journal/`. Point an Obsidian
-vault (or a synced folder) at that directory; no special integration needed (QUESTIONS #11).
-
-**Bank update (≈yearly):** re-run `fetch_sources` + `ingest` + `validate`, then regenerate the
-explanation batch (new `bank_version`). Trim the RIC grounding / chunk the batch first to
-control cost + rate limits (see `LOG.md`).
-
-## Key invariants (see `constitution.md`)
-- The official ISED bank is the single source of truth; always record
-  `bank_version`. Re-ingest **upserts by id** and **never drops `attempts`**.
-- `attempts` is an append-only event log — the actual learning signal.
-- The mastery/trend/scheduling/readiness path is deterministic; the LLM is only
-  for explanation/diagnosis/narrative.
-- Lesson text is original; source PDFs are referenced, not republished.
+- Official ISED bank = source of truth; always record `bank_version`; re-ingest upserts by
+  `id` and **never drops `attempts`** (append-only event log).
+- The mastery/tier/scheduling/readiness path is **deterministic + idempotent** — no LLM.
+- AI is for explanation/diagnosis/narrative only, and writes **original** text (grounds on
+  reference docs, never reproduces them). All live calls are budget-guarded.
 - Data stays local; secrets come from env, never the repo.
+
+## Roadmap (not yet built)
+
+Trend/decay window on tiers · tier-scaled lesson depth + a "tuned for you" condensed-lesson
+cache (`content_cache`) · optional read-only Cowork deep-dive skill · Phase 7: Advanced
+Qualification (re-ingest the Advanced bank, reuse the engine).
