@@ -385,6 +385,39 @@ from either model.
 input $3 cached / $7.6 uncached), regs grounding ordered together w/ 1h cache.
 Batch NOT yet submitted.
 
+---
+
+## 2026-06-13 — Phase 5 (§6f) batch SUBMITTED + COLLECTED — Opus
+
+**Model choice: Opus** (`claude-opus-4-8`) — per the comparison, Sonnet was close
+but not clearly indistinguishable; Opus's precision/grounding edge is worth the
+~$5–7 on write-once-read-forever content.
+
+**Batch result:** `msgbatch_01N48No1p92eUtd4mKdZuPp3` (984 requests, 298 with
+cached RIC/RBR grounding). **984/984 written, 0 errors, 100% coverage.**
+**Actual one-time cost ≈ $19.34** (Opus @ 50% batch). Came in near the no-cache
+upper bound rather than the $12 cached figure — batch parallelism limited
+grounding cache-reads, and the structured-output schema adds input tokens. Still
+in the $10–20 expectation; one-time, regenerate only on a bank revision.
+NOTE: this is account spend, NOT logged to the in-app `usage` table — the batch is
+a build step, separate from the monthly study budget (still $0 MTD).
+
+**Validated:** every row has all required layers (core/distractors/concept/
+misconception/link) with valid A/B/C/D distractor letters; electronics cites the
+formula with no fabricated reg; regs correctly cite grounded refs (e.g. "RBR-4
+section 13" for the 30-day address rule). `/api/explain` confirmed cache-first
+(source=batch, adaptive reveal by tier, zero live call).
+
+**Phase 5 status:** loop (recommendation.json) ✓, AIProvider+Anthropic ✓, budget
+guard + usage table ✓, journal ✓, batch explanation layer ✓, adaptive reveal ✓,
+readiness (≥80% fresh every section AND §6d.4 coverage) ✓, prompts externalized ✓,
+model routing (Opus reason/content, Haiku narrate) ✓, evals/ ✓.
+
+**Next:** Phase 6 — package & deploy (Dockerfile + compose, Proxmox LXC, SQLite
+backup to NAS, README run/deploy). Plus deferred niceties: trend/decay window,
+tier-scaled lesson depth/spacing, the §6d.6 "Tuned for you" lesson block +
+content_cache (per-section AI-condensed lessons, beyond per-question explanations).
+
 **How to run**
 ```
 pip install -r requirements.txt

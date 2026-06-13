@@ -95,23 +95,25 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [ ] **`content_cache` table (§7):** cache AI content by (section/sub + tier + miss-profile
       hash + bank_version + prompt-version); regenerate only on key change; budget-guarded.
 
-## Phase 5 — Close the loop (deterministic engine + Anthropic AI layer)
-- [ ] (P0) Engine computes per-section/subsection mastery **+ trend** (improving /
-      plateaued / regressing), fresh vs review accuracy, most-missed concepts, and
-      fast-wrong vs slow-wrong classification. Idempotent.
-- [ ] (P0) Engine writes `recommendation.json` (next session, focus, review queue,
-      readiness, rationale) — versioned, human-readable.
-- [ ] (P0) Dashboard reads `recommendation.json` and surfaces "today's session" — closing
-      app → engine → docs → app.
-- [ ] (P0) `AIProvider` interface (`explain()`, `diagnose()`, `narrate()`) + Anthropic impl;
-      key from env/secrets. **Default model Opus**; stub/local impl behind the same interface.
-- [ ] (P0) **Budget guard:** `usage` table (tokens/cost/type per call); enforce monthly
-      ceiling (~$15); fall back to deterministic-only when exceeded. Prompt-cache the RIC
-      reference docs. Set a Console spend limit too. (See QUESTIONS.md.)
-- [ ] AI-written narrative `journal/YYYY-MM-DD.md` per cycle (scores + plan delta + why).
-- [ ] (P0) Readiness detection: fresh-question accuracy ≥80% across all 8 sections **AND**
-      the §6d.4 coverage guarantee (every subsection probed within the recency window) ⇒
-      "book the exam."
+## Phase 5 — Close the loop (deterministic engine + Anthropic AI layer)  *(DONE 2026-06-13)*
+- [x] (P0) Engine computes mastery + **trend** / fresh-vs-review / most-missed / fast-wrong vs
+      slow-wrong, idempotent. `app/engine/analysis.py`.
+- [x] (P0) Engine writes `recommendation.json` (+ history table, dedup by content hash).
+      `app/engine/recommend.py`.
+- [x] (P0) Dashboard reads the recommendation and surfaces "today's session" (app→engine→docs→app).
+- [x] (P0) `AIProvider` (`explain/diagnose/narrate/condense`) + Anthropic impl + Stub; key from
+      `.env`; per-call-type routing (Opus reason/content, Haiku narrate); externalized prompts.
+- [x] (P0) **Budget guard:** `usage` table + monthly ceiling (default $15, configurable);
+      fall back to stub when exceeded; RIC docs prompt-cached. `app/coaching/usage.py`.
+- [x] AI-written narrative `journal/YYYY-MM-DD.md` per cycle. `app/coaching/journal.py`.
+- [x] (P0) **Batch explanation layer (§6f):** Message Batches → **984/984** rich STRUCTURED
+      explanations (core/distractors/concept/misconception/link/+opt) into `explanations`,
+      tagged bank_version + Opus. `explain()` cache-first. ~$19.34 one-time. `explain_batch.py`.
+- [x] (P0) **Adaptive reveal (§6f.5):** `/api/explain` picks default depth by §6d tier; quiz.js
+      "Go deeper" expander reveals the full stack. Deterministic, free.
+      *(Live per-user `diagnose()` layer: provider method built; UI surfacing is a small follow-on.)*
+- [x] (P0) Readiness: ≥80% fresh-question accuracy in every section AND §6d.4 coverage ⇒
+      "book the exam." `app/engine/readiness.py`.
 
 ## Phase 6 — Package & deploy
 - [ ] (P0) Dockerfile + docker-compose.
