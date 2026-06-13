@@ -128,6 +128,21 @@ def main() -> None:
     assert t1 == t2 and b1 == b2, "adaptive not deterministic"
     assert len(adaptive.select_drill(conn, 5, 10)) == 10
 
+    # diagnostic placement (§6d.1)
+    dgq = c.post("/api/quiz", json={"mode": "diagnostic", "section": 7}).json()
+    print("diagnostic:", dgq["count"], "questions")
+    assert 1 <= dgq["count"] <= 10
+    assert all("correct_index" not in q for q in dgq["questions"]), "ANSWER LEAKED (diagnostic)"
+    served = [q["id"] for q in dgq["questions"]]
+    for q in served:
+        ci = conn.execute("SELECT correct_index FROM questions WHERE id=?", (q,)).fetchone()["correct_index"]
+        c.post("/api/attempt", json={"question_id": q, "chosen_index": ci, "mode": "diagnostic"})
+    dres = c.post("/api/diagnostic", json={"section": 7, "served_ids": served, "confidence_prior": "rusty"}).json()
+    assert dres["tier"] == "test-out" and dres["score_pct"] == 100.0, dres  # all answered correctly
+    from app.engine import diagnostic as diagmod
+    assert diagmod.has_diagnostic(conn, 7)
+    assert c.get("/quiz?mode=diagnostic&section=7&confidence=rusty").status_code == 200
+
     # formula-sheet trainer
     ft = c.get("/formula-trainer")
     assert ft.status_code == 200

@@ -19,6 +19,7 @@ from app.engine import scheduler, adaptive
 MOCK_EXAM_SIZE = 100
 DEFAULT_DRILL_SIZE = 20
 DEFAULT_REVIEW_SIZE = 20
+DIAGNOSTIC_SIZE = 8
 
 
 def allocate_proportional(sizes: dict[int, int], total: int) -> dict[int, int]:
@@ -42,6 +43,30 @@ def build_drill(conn, section: int, count: int = DEFAULT_DRILL_SIZE,
     (θ-aware + coverage-aware; random only at cold start). No answers in payload."""
     chosen = adaptive.select_drill(conn, section, count, rng=rng)
     return queries.questions_for_ids(conn, chosen)
+
+
+def build_diagnostic(conn, section: int, size: int = DIAGNOSTIC_SIZE,
+                     rng: random.Random | None = None) -> list[dict]:
+    """A short placement probe spanning the section's subsections (§6d.1).
+    Round-robin over shuffled subsection buckets so the probe isn't all from one
+    subsection. No answers in the payload."""
+    rng = rng or random.Random()
+    frame = queries.all_question_ids_by_subsection(conn)
+    buckets = [list(ids) for (sec, _sub), ids in frame.items() if sec == section]
+    if not buckets:
+        return []
+    for b in buckets:
+        rng.shuffle(b)
+    rng.shuffle(buckets)
+    picked: list[str] = []
+    while len(picked) < size and any(buckets):
+        for b in buckets:
+            if b:
+                picked.append(b.pop())
+                if len(picked) >= size:
+                    break
+        buckets = [b for b in buckets if b]
+    return queries.questions_for_ids(conn, picked)
 
 
 def build_review(conn, count: int = DEFAULT_REVIEW_SIZE) -> list[dict]:

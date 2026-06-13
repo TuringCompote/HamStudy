@@ -6,6 +6,8 @@ const el = (id) => document.getElementById(id);
 const root = el("quiz");
 const MODE = root.dataset.mode;
 const SECTION = root.dataset.section ? Number(root.dataset.section) : null;
+const CONFIDENCE = root.dataset.confidence || null;
+const FEEDBACK_MODES = ["drill", "review"]; // exam + diagnostic defer feedback
 const OPTION_LETTERS = ["A", "B", "C", "D"];
 
 let questions = [];
@@ -98,8 +100,8 @@ async function choose(chosen) {
   if (res.correct) correctCount++;
   results.push({ q, chosen, correct: res.correct, correct_index: res.correct_index });
 
-  if (MODE !== "exam") {
-    // drill and review give immediate feedback; exam defers to the results screen
+  if (FEEDBACK_MODES.includes(MODE)) {
+    // drill and review give immediate feedback; exam + diagnostic defer
     showFeedback(chosen, res);
   }
   el("next").classList.remove("hidden");
@@ -124,10 +126,46 @@ el("next").onclick = () => {
   else finish();
 };
 
+function tierCss(t) {
+  return ({ "test-out": "testout", light: "light", standard: "standard", deep: "deep" })[t] || "none";
+}
+
+async function finishDiagnostic() {
+  let res;
+  try {
+    res = await api("/api/diagnostic", {
+      section: SECTION,
+      served_ids: questions.map((q) => q.id),
+      confidence_prior: CONFIDENCE,
+    });
+  } catch (e) {
+    el("results").innerHTML = `<p class="muted">Could not save diagnostic: ${e.message}</p>`;
+    el("results").classList.remove("hidden");
+    return;
+  }
+  const tier = res.tier || "unrated";
+  el("results").innerHTML = `
+    <h2>Diagnostic result</h2>
+    <p class="score">Section ${SECTION}: <strong>${res.score_pct}%</strong></p>
+    <p class="verdict">Starting depth tier:
+      <strong class="tier-text-${tierCss(tier)}">${tier}</strong></p>
+    <p class="muted small">This seeds your plan — your tier updates automatically as you
+      drill (measured performance wins over the probe).</p>
+    <div class="card-actions">
+      <a class="btn btn-primary" href="/section/${SECTION}">Back to section</a>
+      <a class="btn" href="/">Dashboard</a>
+    </div>`;
+  el("results").classList.remove("hidden");
+}
+
 function finish() {
   if (timerHandle) clearInterval(timerHandle);
   el("card").classList.add("hidden");
   el("progress").textContent = "";
+  if (MODE === "diagnostic") {
+    finishDiagnostic();
+    return;
+  }
   const pct = answered ? Math.round((1000 * correctCount) / answered) / 10 : 0;
   const elapsed = Math.floor((Date.now() - examStartedAt) / 1000);
 

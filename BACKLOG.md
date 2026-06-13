@@ -68,20 +68,24 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
       (`app/formulas.py`), two directions, missed cards requeue. Trains recognizing the
       unlabelled sheet's formulas (no PDF reproduced).
 
-## Phase 4.5 — Adaptive learning engine (§6d)  *(the per-section adaptivity Chris asked for)*
-- [ ] (P0) Diagnostic placement: short per-section probe (6–10 Q) + optional self-declared
-      confidence prior; engine scores it and assigns a starting **depth tier**.
-- [ ] (P0) Depth tiers (test-out / light / standard / deep) drive lesson depth + drill
-      volume + spacing; store `tier` per section in `progress`.
-- [ ] (P0) Elo/IRT-lite: per-question `difficulty_b` + per-section ability `θ`, updated
-      online from `attempts`; drill selector serves questions near θ (~70–85% success zone).
-      Must be deterministic.
-- [ ] (P0) Continuous re-evaluation: tiers move with trend (decay drops test-out → light).
-- [ ] (P0) **Coverage guarantee (§6d.4):** track per-subsection fresh-question recency;
-      readiness requires ≥80%/section AND every subsection probed within the window.
+## Phase 4.5 — Adaptive learning engine (§6d)  *(deterministic core DONE 2026-06-13)*
+- [x] (P0) Diagnostic placement: per-section probe (8 Q across subsections) + self-declared
+      confidence prior; engine scores it → starting **depth tier**. `app/engine/diagnostic.py`,
+      `/quiz?mode=diagnostic`, `/api/diagnostic`, section-page CTA.
+- [x] (P0) Depth tiers (test-out/light/standard/deep) from **fresh** accuracy, seeded by the
+      diagnostic when fresh data is thin (measured overrides). Tier computed on demand +
+      shown on dashboard/section. *(Drives drill selection; lesson-depth/spacing scaling by
+      tier is the Phase-5 AI + scheduler-tuning follow-on.)*
+- [x] (P0) Elo/IRT-lite: per-question `difficulty_b` + per-section ability `θ`, replayed from
+      `attempts` (deterministic); drill selector serves the ~75% productive zone. `adaptive.py`.
+- [~] (P0) Continuous re-evaluation: tiers recompute from accumulated fresh accuracy each
+      load, so they move as performance changes. *(Windowed trend/decay = Phase 5.)*
+- [x] (P0) **Coverage guarantee (§6d.4):** per-subsection fresh probing tracked; readiness
+      requires ≥80%/section AND every subsection probed. `app/engine/readiness.py`.
+      *(Recency-window refinement deferred.)*
 - [ ] AI layer: condense lesson text to tier depth; generate Deep-tier worked examples;
-      explain individual misses; narrate tier changes. (Anthropic, behind `AIProvider`.)
-- [ ] `diagnostics` table (append-only) records every probe + resulting tier.
+      explain individual misses; narrate tier changes. (Anthropic, behind `AIProvider`.) → Phase 5
+- [x] `diagnostics` table (append-only) records every probe + resulting tier.
 - [ ] **Curated local corpus + RAG (§6d.6):** index `references/` (question bank, RIC-3/1,
       RBR-4, formula sheets + any user-added PDFs) into a lightweight retrieval index;
       English-only; re-indexable when files change.

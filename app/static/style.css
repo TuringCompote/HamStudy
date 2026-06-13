@@ -144,6 +144,15 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .lesson blockquote { margin: var(--sp-4) 0 0; padding: var(--sp-2) var(--sp-4);
   border-left: 3px solid var(--accent); color: var(--muted); }
 
+/* diagnostic call-to-action */
+.diag-cta { background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: var(--border-w) solid var(--accent); border-radius: var(--radius);
+  padding: var(--sp-4); margin: var(--sp-4) 0; }
+.diag-form { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; margin-top: var(--sp-3); }
+.diag-conf { color: var(--muted); font-size: 0.9rem; display: flex; gap: var(--sp-2); align-items: center; }
+.diag-conf select { padding: var(--sp-1) var(--sp-2); border-radius: var(--radius-sm);
+  border: var(--border-w) solid var(--border); background: var(--surface-2); color: var(--ink); }
+
 /* concept tools */
 .tool-wrap { background: var(--surface); border: var(--border-w) solid var(--border);
   border-radius: var(--radius); padding: var(--sp-4); margin-bottom: var(--sp-4); box-shadow: var(--shadow); }

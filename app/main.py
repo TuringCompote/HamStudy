@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from app.db import queries
 from app.db.init_db import connect
-from app.engine import mastery, coach
+from app.engine import mastery, coach, diagnostic
 from app import quiz, config, tools, content, formulas
 
 BASE = Path(__file__).resolve().parent
@@ -31,7 +31,7 @@ app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 
 # --- request models ---
 class QuizRequest(BaseModel):
-    mode: str = Field(pattern="^(drill|exam|review)$")
+    mode: str = Field(pattern="^(drill|exam|review|diagnostic)$")
     section: int | None = Field(default=None, ge=1, le=8)
     count: int | None = Field(default=None, ge=1, le=200)
 
@@ -39,8 +39,14 @@ class QuizRequest(BaseModel):
 class AttemptRequest(BaseModel):
     question_id: str
     chosen_index: int = Field(ge=0, le=3)
-    mode: str = Field(pattern="^(drill|exam|review)$")
+    mode: str = Field(pattern="^(drill|exam|review|diagnostic)$")
     response_ms: int | None = Field(default=None, ge=0)
+
+
+class DiagnosticRequest(BaseModel):
+    section: int = Field(ge=1, le=8)
+    served_ids: list[str] = Field(min_length=1, max_length=20)
+    confidence_prior: str | None = None
 
 
 # --- pages ---
@@ -49,6 +55,7 @@ def dashboard(request: Request):
     conn = connect()
     try:
         by_section = mastery.compute_section_mastery(conn)
+        diagnostic.apply_diagnostic_tiers(conn, by_section)
         summary = coach.dashboard_summary(conn, by_section)
         session = coach.suggest_session(conn, by_section)
     finally:
@@ -66,9 +73,14 @@ def section_page(request: Request, section: int):
         raise HTTPException(404, "section must be 1..8")
     conn = connect()
     try:
-        stats = mastery.compute_section_mastery(conn)[section]
+        by_section = mastery.compute_section_mastery(conn)
+        diagnostic.apply_diagnostic_tiers(conn, by_section)
+        stats = by_section[section]
+        has_diag = diagnostic.has_diagnostic(conn, section)
     finally:
         conn.close()
+    # offer the placement probe when the section is essentially unrated
+    offer_diagnostic = (not has_diag) and stats["fresh_answered"] < diagnostic.MIN_FRESH_FOR_TIER
     return templates.TemplateResponse(
         request,
         "section.html",
@@ -78,8 +90,20 @@ def section_page(request: Request, section: int):
             "lesson_html": content.lesson_html(section),
             "tools": tools.tools_for_section(section),
             "stats": stats,
+            "offer_diagnostic": offer_diagnostic,
         },
     )
+
+
+@app.post("/api/diagnostic")
+def api_diagnostic(req: DiagnosticRequest):
+    conn = connect()
+    try:
+        return diagnostic.record_diagnostic(
+            conn, req.section, req.served_ids, req.confidence_prior
+        )
+    finally:
+        conn.close()
 
 
 @app.get("/formula-trainer", response_class=HTMLResponse)
@@ -90,14 +114,17 @@ def formula_trainer(request: Request):
 
 
 @app.get("/quiz", response_class=HTMLResponse)
-def quiz_page(request: Request, mode: str = "drill", section: int | None = None):
-    if mode not in ("drill", "exam", "review"):
-        raise HTTPException(400, "mode must be 'drill', 'exam', or 'review'")
-    title = {"exam": "Mock Exam", "review": "Review"}.get(mode, f"Drill — Section {section}")
+def quiz_page(request: Request, mode: str = "drill", section: int | None = None,
+              confidence: str | None = None):
+    if mode not in ("drill", "exam", "review", "diagnostic"):
+        raise HTTPException(400, "mode must be 'drill', 'exam', 'review', or 'diagnostic'")
+    title = {"exam": "Mock Exam", "review": "Review",
+             "diagnostic": f"Diagnostic — Section {section}"}.get(mode, f"Drill — Section {section}")
     return templates.TemplateResponse(
         request,
         "quiz.html",
         {"mode": mode, "section": section, "title": title,
+         "confidence": confidence,
          "section_name": queries.SECTION_NAMES.get(section or 0, "")},
     )
 
@@ -123,6 +150,10 @@ def api_quiz(req: QuizRequest):
             questions = quiz.build_review(conn, req.count or quiz.DEFAULT_REVIEW_SIZE)
             if not questions:
                 raise HTTPException(404, "nothing is due for review right now")
+        elif req.mode == "diagnostic":
+            if req.section is None:
+                raise HTTPException(400, "diagnostic requires a section")
+            questions = quiz.build_diagnostic(conn, req.section)
         else:
             if req.section is None:
                 raise HTTPException(400, "drill requires a section")

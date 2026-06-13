@@ -274,6 +274,55 @@ Push when ready.
 Elo/IRT-lite θ-aware selection, coverage guarantee) or Phase 5 (close the loop +
 Anthropic AI layer + the §6d.6 corpus/RAG content).
 
+---
+
+## 2026-06-13 — Phase 4.5 (adaptive engine — deterministic core)
+
+Built in three committed increments (all deterministic; AI deferred to Phase 5):
+
+**1/3 — Fresh accuracy, real tiers, coverage, readiness**
+- Depth tier now from **fresh-question accuracy** (each question's first attempt),
+  not all-time — the exam-relevant signal. Per-section fresh_answered/correct/pct.
+- `app/engine/readiness.py`: `coverage()` (subsections probed by fresh Qs) +
+  `readiness()` → `exam_ready` only when all 8 sections ≥80% fresh AND every
+  subsection probed, with plain-language blockers (§6d.4 / constitution §8).
+- Dashboard now shows fresh % per section + overall, a "Book the exam" flag, and
+  "not ready yet" with blocker tooltip.
+
+**2/3 — Elo/IRT-lite + θ-aware drills**
+- `app/engine/adaptive.py`: replay attempts → per-section ability θ + per-question
+  difficulty b (fixed K + init ⇒ deterministic; they co-calibrate). `select_drill`
+  serves the ~75% productive zone, pulling forward under-probed subsections + unseen
+  questions; random only at cold start. `build_drill` routes through it.
+
+**3/3 — Diagnostic placement**
+- `app/engine/diagnostic.py` + `/quiz?mode=diagnostic` + `/api/diagnostic` +
+  section-page CTA (with cold/rusty/new confidence prior). 8-Q probe across
+  subsections, scored → starting tier, recorded in the `diagnostics` table.
+  `apply_diagnostic_tiers` seeds a section's tier from the probe until it has
+  ≥6 fresh attempts, after which measured performance overrides (§6d.1).
+- Added `PRAGMA busy_timeout=5000` to DB connections (WAL robustness).
+
+**Verified:** θ rises with success / wrong questions get higher difficulty;
+scheduler + adaptive + readiness all deterministic; diagnostic scoring + tier
+seeding (thin-data → diagnostic source, ≥6 fresh → measured). Smoke test extended
+to cover readiness, adaptive determinism, and the full diagnostic flow. All green.
+
+**Decisions**
+- Tier cutoffs kept at the mockup's 80/70/55 (test-out/light/standard, else deep),
+  centralized in `TIER_CUTOFFS`; computed from fresh accuracy now. Spec §6d.2's
+  90/75/50 is a one-line alternative if preferred.
+- Tier is computed on demand (+ diagnostic-seeded), not persisted to `progress` —
+  keeps it idempotent over the log; persistence is a pure optimization if needed.
+
+**Git:** Phase 4.5 commits are LOCAL (push still denied to the agent this session).
+Pending push: the 3 Phase-4.5 increments (+ earlier Phase-4 commits if not yet
+pushed). 
+
+**Next:** Phase 5 — close the loop (recommendation.json), the `AIProvider` +
+Anthropic layer, budget guard, journal, and the §6d.6 curated-corpus content
+adaptation; plus the deferred trend/decay + tier-scaled lesson depth/spacing.
+
 **How to run**
 ```
 pip install -r requirements.txt

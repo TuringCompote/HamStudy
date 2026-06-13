@@ -17,6 +17,27 @@
   {% endif %}
 </div>
 
+{% if offer_diagnostic %}
+<section class="diag-cta">
+  <strong>New to this section?</strong>
+  Take a quick <strong>{{ 8 }}-question diagnostic</strong> to set your starting depth —
+  the app then compresses what you know and goes deep where you don't.
+  <form class="diag-form" method="get" action="/quiz">
+    <input type="hidden" name="mode" value="diagnostic">
+    <input type="hidden" name="section" value="{{ section }}">
+    <label class="diag-conf">How well do you know it?
+      <select name="confidence">
+        <option value="">— pick —</option>
+        <option value="cold">I know this cold</option>
+        <option value="rusty">Rusty</option>
+        <option value="new">New to me</option>
+      </select>
+    </label>
+    <button class="btn btn-primary" type="submit">Start diagnostic ↗</button>
+  </form>
+</section>
+{% endif %}
+
 <!-- Learn -->
 <section class="learn">
   <h2 class="step-h"><span class="step">1</span> Learn</h2>

@@ -4,7 +4,8 @@
 
 <div id="quiz"
      data-mode="{{ mode }}"
-     {% if section %}data-section="{{ section }}"{% endif %}>
+     {% if section %}data-section="{{ section }}"{% endif %}
+     {% if confidence %}data-confidence="{{ confidence }}"{% endif %}>
 
   <div class="quiz-head">
     <h1 id="quiz-title">{{ title }}{% if section_name %} <small>{{ section_name }}</small>{% endif %}</h1>
