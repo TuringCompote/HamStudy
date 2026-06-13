@@ -1,0 +1,19 @@
+[Unit]
+# Elmer — start the Docker Compose stack on boot.
+# Installed by deploy/install.sh (placeholders are substituted with the real
+# repo path and docker binary). Manage with: systemctl {status,start,stop} elmer
+Description=Elmer - Canadian Basic amateur radio trainer
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=__ELMER_DIR__
+ExecStart=__DOCKER__ compose up -d
+ExecStop=__DOCKER__ compose down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

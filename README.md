@@ -83,6 +83,9 @@ deterministic engine + the cached batch explanations; add it later in `.env` for
 diagnose/journal). Then reach it at `http://<lxc-ip-or-fqdn>:80` via your local DNS.
 Re-running the script preserves an existing `data/hamstudy.db` (your attempts are never lost).
 
+The installer also registers a **systemd unit** (`elmer.service`) so the stack starts on
+boot. Manage it with `systemctl status|start|stop elmer` (and `docker compose logs -f`).
+
 > ⚠️ **`data/hamstudy.db` is your durable state** — questions, the batch explanations, and your
 > append-only `attempts`. The installer rebuilds it only when it's absent; otherwise it's left
 > alone. Back it up to the NAS (below).

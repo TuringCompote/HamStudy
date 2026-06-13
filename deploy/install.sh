@@ -80,6 +80,19 @@ fi
 echo "==> Starting Elmer..."
 $DC up -d
 
+# --- 6. systemd unit (start on boot) ------------------------------------------
+if command -v systemctl >/dev/null 2>&1; then
+  echo "==> Installing systemd unit (start on boot)..."
+  DOCKER_BIN="$(command -v docker)"
+  sed -e "s|__ELMER_DIR__|${REPO}|g" -e "s|__DOCKER__|${DOCKER_BIN}|g" deploy/elmer.service \
+    | $SUDO tee /etc/systemd/system/elmer.service >/dev/null
+  $SUDO systemctl daemon-reload
+  $SUDO systemctl enable elmer.service
+  echo "    enabled elmer.service — the stack will come up on boot"
+else
+  echo "==> systemd not found; relying on the container's restart policy"
+fi
+
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 FQDN="$(hostname -f 2>/dev/null || hostname)"
 echo
@@ -89,5 +102,6 @@ echo "    http://${FQDN}:${PORT}   (via your local DNS)"
 echo
 echo "    health:  curl http://localhost:${PORT}/api/health"
 echo "    logs:    $SUDO docker compose logs -f"
+echo "    boot:    $SUDO systemctl status elmer    (starts automatically on reboot)"
 echo
 echo "Reminder: set a hard monthly spend limit in the Anthropic Console before heavy AI use."
