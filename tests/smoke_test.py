@@ -85,8 +85,21 @@ def main() -> None:
     assert sum(alloc.values()) == 100, alloc
     assert alloc[1] >= alloc[8], alloc  # bigger section gets >= share
 
+    # dashboard renders the instrument-panel layout
+    dash = c.get("/")
+    assert dash.status_code == 200
+    for marker in ["readiness-val", "stat-cards", "session-card",
+                   "Per-section mastery", "tier-text-deep", "app-badge"]:
+        assert marker in dash.text, marker
+
+    # deterministic coach aggregates
+    from app.engine import coach
+    summ = coach.dashboard_summary(conn)
+    assert summ["bank_size"] == 984
+    assert 0 <= summ["mastered"] <= 984
+    assert isinstance(summ["streak"], int)
+
     # pages render
-    assert c.get("/").status_code == 200
     assert c.get("/quiz?mode=exam").status_code == 200
     assert c.get("/quiz?mode=drill&section=3").status_code == 200
 

@@ -43,8 +43,49 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .btn:hover { border-color: var(--accent); }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 
-/* dashboard */
-.summary { padding-bottom: var(--sp-4); border-bottom: var(--border-w) solid var(--border); }
+/* dashboard — instrument panel (matches design mockup) */
+.dash-head { display: flex; justify-content: space-between; align-items: flex-start;
+  gap: var(--sp-4); margin-bottom: var(--sp-5); }
+.dash-id { display: flex; align-items: center; gap: var(--sp-3); }
+.app-badge { display: inline-flex; align-items: center; justify-content: center;
+  width: 2.6rem; height: 2.6rem; border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  color: var(--accent); border: var(--border-w) solid var(--border); }
+.app-name { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.01em; }
+.readiness { text-align: right; }
+.readiness-val { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+
+.stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3);
+  margin-bottom: var(--sp-5); }
+.stat { background: var(--surface); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius); padding: var(--sp-4); box-shadow: var(--shadow); }
+.stat-label { color: var(--muted); font-size: 0.85rem; margin-bottom: var(--sp-2); }
+.stat-val { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+
+.session-card { background: var(--surface); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius); padding: var(--sp-5); margin-bottom: var(--sp-6);
+  box-shadow: var(--shadow); border-left: 3px solid var(--accent); }
+.session-head { font-weight: 700; font-size: 1.1rem; margin-bottom: var(--sp-2); }
+.session-icon { color: var(--accent); }
+.session-detail { color: var(--muted); margin: 0 0 var(--sp-4); }
+
+.caps { text-transform: uppercase; letter-spacing: 0.08em; }
+.mastery-list h2 { margin-bottom: var(--sp-3); }
+.mrow { display: grid; grid-template-columns: minmax(150px, 1.4fr) 3fr auto auto;
+  align-items: center; gap: var(--sp-4); padding: var(--sp-2) 0;
+  border-bottom: var(--border-w) solid var(--border); text-decoration: none; color: var(--ink); }
+.mrow:hover { background: var(--surface-2); }
+.mrow-name { font-weight: 600; }
+.mrow-meter { width: 100%; }
+.mrow-pct { text-align: right; font-weight: 600; min-width: 3.2rem; }
+.mrow-tier { text-align: right; font-size: 0.85rem; min-width: 4.5rem; }
+.tier-text-testout  { color: var(--tier-testout); }
+.tier-text-light    { color: var(--tier-light); }
+.tier-text-standard { color: var(--tier-standard); }
+.tier-text-deep     { color: var(--tier-deep); }
+.tier-text-none     { color: var(--muted); }
+.tier-legend { display: flex; gap: var(--sp-4); margin-top: var(--sp-4); flex-wrap: wrap; }
+
 .section-table { width: 100%; border-collapse: collapse; }
 .section-table th, .section-table td {
   text-align: left; padding: var(--sp-2) var(--sp-3);
@@ -62,15 +103,21 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
   border-radius: var(--radius-sm); overflow: hidden; vertical-align: middle;
 }
 .smeter-fill { height: 100%; background: var(--accent); }
+/* depth-tier colors (spec §6d.2) */
+.smeter-fill.tier-testout  { background: var(--tier-testout); }
+.smeter-fill.tier-light    { background: var(--tier-light); }
+.smeter-fill.tier-standard { background: var(--tier-standard); }
+.smeter-fill.tier-deep     { background: var(--tier-deep); }
+/* legacy mastery-band classes (kept for any older callers) */
 .smeter-fill.tier-ok   { background: var(--ok); }
 .smeter-fill.tier-warn { background: var(--warn); }
 .smeter-fill.tier-low  { background: var(--bad); }
-/* notches: thin gaps every 10% give the segmented-meter read */
+/* notches: thin gaps every 5% give the ~20-segment meter read */
 .smeter::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(
-    90deg, transparent 0, transparent calc(10% - 2px),
-    var(--surface) calc(10% - 2px), var(--surface) 10%);
+    90deg, transparent 0, transparent calc(5% - 2px),
+    var(--bg) calc(5% - 2px), var(--bg) 5%);
 }
 .smeter-val { margin-left: var(--sp-2); font-size: 0.82rem; font-weight: 600; }
 .smeter-row { display: flex; align-items: center; }

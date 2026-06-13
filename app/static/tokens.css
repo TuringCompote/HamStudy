@@ -28,10 +28,16 @@
   /* amber alternative (swap into the three above to retheme):
      --accent: #f0a830; --accent-dim: #b4781a; --accent-ink: #2a1c02; */
 
-  /* status (also used as adaptive-tier colors on the S-meter, see app.css) */
-  --ok: var(--accent);            /* >=80% Honours / strong tier */
+  /* status */
+  --ok: var(--accent);            /* >=80% Honours */
   --warn: #e0a13a;                /* 70-80% pass-not-honours */
-  --bad: #d8533f;                 /* <70% weak / deep tier */
+  --bad: #d8533f;                 /* <70% weak */
+
+  /* depth-tier colors (spec §6d.2) — drive the S-meter + tier labels */
+  --tier-testout: var(--accent);  /* teal  — test-out (≥80%) */
+  --tier-light: #3b82f6;          /* blue  — light */
+  --tier-standard: #8a8f98;       /* grey  — standard */
+  --tier-deep: #e0a13a;           /* amber — deep */
 
   /* light theme (default) */
   --bg: #f4f6f8;
@@ -58,5 +64,9 @@
     --accent: #2dd4bf;
     --accent-dim: #149e90;
     --accent-ink: #04201c;
+    --tier-testout: var(--accent);
+    --tier-light: #4f93ff;
+    --tier-standard: #6b7480;
+    --tier-deep: #e6a93f;
   }
 }

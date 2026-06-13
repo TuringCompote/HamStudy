@@ -14,10 +14,32 @@ The Honours bar is 80% (spec §0.1); 70% is a pass.
 """
 from __future__ import annotations
 
-from app.db.queries import SECTION_NAMES
+from app.db.queries import SECTION_NAMES, SECTION_SHORT_NAMES
 
 HONOURS_BAR = 80.0
 PASS_BAR = 70.0
+
+# Depth tiers (spec §6d.2). NOTE: these thresholds are a PROVISIONAL proxy that
+# maps mastery% -> tier for the dashboard today. Phase 4.5 replaces this with the
+# real adaptive tier (diagnostic + performance + trend). Colors: test-out=teal,
+# light=blue, standard=grey, deep=amber (see tokens.css).
+_TIER_CSS = {"test-out": "testout", "light": "light", "standard": "standard", "deep": "deep"}
+
+
+def provisional_tier(pct: float | None) -> str | None:
+    if pct is None:
+        return None
+    if pct >= 80:
+        return "test-out"
+    if pct >= 70:
+        return "light"
+    if pct >= 55:
+        return "standard"
+    return "deep"
+
+
+def tier_css(tier: str | None) -> str:
+    return _TIER_CSS.get(tier, "none")
 
 
 def mastery_band(pct: float | None) -> str | None:
@@ -64,9 +86,11 @@ def compute_section_mastery(conn) -> dict[int, dict]:
         seen = s["seen"] if s else 0
         mastery = round(100.0 * correct / answered, 1) if answered else None
         coverage = round(100.0 * seen / size, 1) if size else 0.0
+        tier = provisional_tier(mastery)
         out[section] = {
             "section": section,
             "name": SECTION_NAMES.get(section, f"Section {section}"),
+            "short": SECTION_SHORT_NAMES.get(section, f"Section {section}"),
             "size": size,
             "answered": answered,
             "correct": correct,
@@ -75,6 +99,8 @@ def compute_section_mastery(conn) -> dict[int, dict]:
             "coverage_pct": coverage,
             "meets_honours": mastery is not None and mastery >= HONOURS_BAR,
             "band": mastery_band(mastery),
+            "tier": tier,
+            "tier_css": tier_css(tier),
         }
     return out
 

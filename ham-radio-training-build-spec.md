@@ -72,6 +72,20 @@ prose in §6a / §8 / §11 conflicts, **this section wins**.
   HTMX is acceptable for the app shell/navigation if the agent prefers. Postgres is not
   needed at single-user scale.
 
+### 0.2b Name & visual design (decided 2026-06-13)
+
+- **App name: `Elmer`** — ham slang for the experienced operator who mentors a newcomer,
+  which is exactly this app's role. Store it in a **single `APP_NAME` config constant** +
+  the page `<title>`; never hardcode it across files, so it stays one-line changeable.
+- **Visual direction: "instrument panel."** Calm neutral base (light + dark), **one accent**
+  (phosphor teal or amber, à la a scope/meter), **monospace font for numbers, question IDs
+  (`B-006-002-003`), and formula values**, clean sans (e.g. Inter) for body. Per-section
+  mastery renders as a **segmented S-meter** whose color encodes the adaptive depth tier
+  (§6d.2). Define all color/spacing/radius/typography as **CSS design tokens in one
+  `tokens.css`**; the 8 SVG concept tools theme themselves from those variables so
+  everything stays visually consistent across build phases. Keep styling lightweight — no
+  heavy CSS framework (matches the vanilla-JS/SVG stack).
+
 ### 0.3 Scope of the current session
 
 - **Spec refinement only — no app code was written.** Deliverables produced this session:
@@ -480,6 +494,28 @@ Until both hold, the engine will not flag "book the exam." This keeps the adapti
   narrating tier changes ("you tested out of Circuit Components — we'll just keep it warm
   with occasional review").
 
+### 6d.6 AI-adapted content from a curated local corpus (decided 2026-06-13)
+The displayed lesson/explanation content **adapts to the user's drill & exam results**, and
+the AI draws on a **curated local reference corpus** to ground what it writes. This extends
+§6d.5 — it does **not** move any decision into the LLM.
+
+- **Corpus = curated + local (not live web scraping).** Source material is downloaded once
+  into `references/` and indexed (retrieval-augmented generation). Freely-usable Government
+  works — the **question bank, RIC-3, RIC-1, RBR-4, the formula sheets** — are grounding
+  fodder; community/course material (UWARC, HamStudy, VE3FCQ, …) may be used to ground and
+  is **cited/linked, never reproduced** (constitution §3 — original text only). The user can
+  drop new PDFs into `references/` and re-index. Keeps data local (constitution §4).
+- **Engine diagnoses, AI writes.** The deterministic engine decides *what* (weak
+  subsections, depth tier, what to drill/review); the AI generates the *content shown* to fit
+  that — a "Tuned for you" lesson block at the tier's depth, per-miss explanations, and the
+  plain-language "Today's session" text. Retrieval grounds it; output is original prose.
+- **Generate-on-demand + cache.** AI-adapted content is cached keyed by (section, subsection,
+  depth tier, a hash of the user's miss-profile, `bank_version`, prompt-version); regenerate
+  only when that key changes. Prompt-cache the corpus. Respect the `usage` budget guard.
+- **Base lessons are the fallback.** The hand-written original lessons (`app/content/`)
+  always render; the AI layer is enrichment on top, so the app degrades gracefully when the
+  monthly AI budget is hit or it's offline (constitution requires this).
+
 ---
 
 ## 7. Data model
@@ -517,6 +553,14 @@ score, resulting tier, timestamp, and any self-declared confidence prior. Append
 output tokens, estimated cost, call type (explain/diagnose/narrate/condense). The engine
 sums month-to-date cost and blocks further AI calls once the monthly ceiling (~$15) is hit,
 degrading gracefully to deterministic-only.
+
+**`content_cache`** (§6d.6): AI-adapted content generated from the local corpus, cached so
+it's regenerated only when the user's state changes. Columns: `cache_key` (hash of section/
+subsection + depth tier + miss-profile hash + `bank_version` + prompt-version), `kind`
+(lesson|explanation|session), `section`, `body` (original generated markdown/HTML), `sources`
+(JSON of corpus refs cited), `model`, `generated_at`. Lookup by `cache_key`; miss ⇒ generate
+(if budget allows) and insert. The curated corpus itself lives as files in `references/` plus
+a lightweight index (chunked text); it is not user data and need not live in SQLite.
 
 **`recommendation`** (the coach's output channel back to the app — see 6c): next-session
 plan, focus areas, review queue, readiness. Stored as a versioned, human-readable

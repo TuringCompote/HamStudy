@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from app.db import queries
 from app.db.init_db import connect
-from app.engine import mastery
+from app.engine import mastery, coach
 from app import quiz, config, tools, content
 
 BASE = Path(__file__).resolve().parent
@@ -49,13 +49,14 @@ def dashboard(request: Request):
     conn = connect()
     try:
         by_section = mastery.compute_section_mastery(conn)
-        summary = mastery.overall_summary(conn)
+        summary = coach.dashboard_summary(conn, by_section)
+        session = coach.suggest_session(conn, by_section)
     finally:
         conn.close()
     return templates.TemplateResponse(
         request,
         "dashboard.html",
-        {"sections": by_section, "summary": summary},
+        {"sections": by_section, "summary": summary, "session": session},
     )
 
 

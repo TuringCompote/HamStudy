@@ -77,6 +77,14 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [ ] AI layer: condense lesson text to tier depth; generate Deep-tier worked examples;
       explain individual misses; narrate tier changes. (Anthropic, behind `AIProvider`.)
 - [ ] `diagnostics` table (append-only) records every probe + resulting tier.
+- [ ] **Curated local corpus + RAG (§6d.6):** index `references/` (question bank, RIC-3/1,
+      RBR-4, formula sheets + any user-added PDFs) into a lightweight retrieval index;
+      English-only; re-indexable when files change.
+- [ ] **AI-adapted content (§6d.6):** "Tuned for you" lesson block + per-miss explanations,
+      generated from the corpus to fit the engine's tier/miss diagnosis. Original text only
+      (cite/link community sources, never reproduce). Base lessons stay as fallback.
+- [ ] **`content_cache` table (§7):** cache AI content by (section/sub + tier + miss-profile
+      hash + bank_version + prompt-version); regenerate only on key change; budget-guarded.
 
 ## Phase 5 — Close the loop (deterministic engine + Anthropic AI layer)
 - [ ] (P0) Engine computes per-section/subsection mastery **+ trend** (improving /

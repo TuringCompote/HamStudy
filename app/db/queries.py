@@ -23,6 +23,18 @@ SECTION_NAMES = {
     8: "Interference and Suppression",
 }
 
+# compact labels for the dashboard rows (matches the design mockup)
+SECTION_SHORT_NAMES = {
+    1: "Regulations & policies",
+    2: "Operating & procedures",
+    3: "Station assembly & safety",
+    4: "Circuit components",
+    5: "Basic electronics & theory",
+    6: "Feedlines & antennas",
+    7: "Radio wave propagation",
+    8: "Interference & suppression",
+}
+
 
 def _row_to_question(row, *, with_answer: bool = False) -> dict:
     q = {

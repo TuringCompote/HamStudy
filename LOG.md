@@ -176,6 +176,50 @@ theming from `tokens.css`, original lesson text, Learn → Interact → Drill.
 **Next:** remaining Phase 3 non-P0 tools, or proceed to Phase 4 (spaced repetition
 + review queue). Recommend a quick browser check of the tools first.
 
+---
+
+## 2026-06-13 — Series/Parallel tool + dashboard rebuild + AI-content design
+
+**Done**
+- **Series/Parallel R&C tool** (`static/tools/seriesparallel.js`, §4): add/remove
+  components, series/parallel toggle, live equivalent + schematic. (Committed earlier.)
+- **Dashboard rebuilt to match Chris's mockup** (`example dashboard.png`):
+  - Header: app badge + **Elmer** + "Basic with honours · target 80%" + **Exam
+    readiness** %.
+  - Four stat cards: Sections ready (x/8), Day streak, Bank mastered, of 984 %.
+  - **"Today's session"** card (provisional deterministic suggestion).
+  - Per-section rows: **segmented S-meter colored by depth tier** + % + tier label,
+    with a tier legend (test-out / light / standard / deep).
+  - New deterministic engine module `app/engine/coach.py`: `dashboard_summary`,
+    `day_streak` (attempt-date-derived, no wall-clock), `mastered_count` (distinct
+    questions whose latest attempt is correct), `suggest_session`. Tier proxy
+    `provisional_tier` + `tier_css` in `mastery.py`. Tier color tokens in `tokens.css`.
+  - Short section names for the rows. Section page S-meter now tier-colored too.
+- Smoke test extended (dashboard markup + coach aggregates). Empty-DB state renders
+  cleanly (0/8, streak 0, "run a drill" prompt). All green.
+- **Recorded the AI-content vision in the docs** (Chris's decisions #18/#19):
+  - spec **§6d.6** (AI-adapted content from a curated local corpus + RAG; engine
+    diagnoses, AI writes original text; generate-on-demand + cache; base lessons as
+    fallback) and **§7** `content_cache` table.
+  - QUESTIONS #18/#19; BACKLOG Phase 4.5 tasks (corpus/RAG, AI-adapted content,
+    content_cache).
+
+**Decisions**
+- **Tier coloring is a PROVISIONAL mastery-threshold proxy** (≥80 test-out / ≥70
+  light / ≥55 standard / else deep) chosen to match the mockup. Phase 4.5 swaps it
+  for the real adaptive tier (diagnostic + performance + trend) — no template change
+  needed (templates read `tier`/`tier_css`).
+- **"Today's session" is a deterministic placeholder**; Phase 5 replaces it with the
+  full engine `recommendation.json` + AI phrasing.
+- **AI source = curated LOCAL corpus, not live scraping** (reliable, cheap, local,
+  copyright-safe). Original-text-only rule preserved.
+
+**Open / next step**
+- Finish Phase 3 non-P0 tools: **band-plan explorer (§1)** and **propagation
+  visual (§7)** are written but un-wired pending build — wire + test next.
+- Browser eyeball of the dashboard + tools still recommended (no headless JS run).
+- Then Phase 4 (spaced repetition + review queue).
+
 **How to run**
 ```
 pip install -r requirements.txt
