@@ -18,10 +18,15 @@
     </div>
   </div>
   <div class="readiness">
-    <div class="muted small">Exam readiness</div>
+    <div class="muted small">Exam readiness <span class="muted">(fresh-Q)</span></div>
     <div class="readiness-val mono">
       {{ summary.readiness_pct if summary.readiness_pct is not none else "—" }}{% if summary.readiness_pct is not none %}%{% endif %}
     </div>
+    {% if summary.exam_ready %}
+      <div class="ready-flag">✓ Book the exam</div>
+    {% elif summary.blockers %}
+      <div class="muted small" title="{{ summary.blockers | join('; ') }}">not ready yet</div>
+    {% endif %}
   </div>
 </header>
 
@@ -66,13 +71,13 @@
   {% for s in sections.values() %}
   <a class="mrow" href="/section/{{ s.section }}">
     <span class="mrow-name">{{ s.short }}</span>
-    <span class="smeter mrow-meter" title="{{ s.correct }}/{{ s.answered }} correct">
-      {% if s.mastery_pct is not none %}
-      <span class="smeter-fill tier-{{ s.tier_css }}" style="width: {{ s.mastery_pct }}%"></span>
+    <span class="smeter mrow-meter" title="fresh: {{ s.fresh_correct }}/{{ s.fresh_answered }} correct">
+      {% if s.fresh_pct is not none %}
+      <span class="smeter-fill tier-{{ s.tier_css }}" style="width: {{ s.fresh_pct }}%"></span>
       {% endif %}
     </span>
-    <span class="mrow-pct mono">{{ s.mastery_pct if s.mastery_pct is not none else "—" }}{% if s.mastery_pct is not none %}%{% endif %}</span>
-    <span class="mrow-tier tier-text-{{ s.tier_css }}">{{ s.tier if s.tier else "—" }}</span>
+    <span class="mrow-pct mono">{{ s.fresh_pct if s.fresh_pct is not none else "—" }}{% if s.fresh_pct is not none %}%{% endif %}</span>
+    <span class="mrow-tier tier-text-{{ s.tier_css }}">{{ s.tier if s.tier else "unrated" }}</span>
   </a>
   {% endfor %}
 

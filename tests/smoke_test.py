@@ -111,6 +111,16 @@ def main() -> None:
     assert all("correct_index" not in q for q in rv["questions"]), "ANSWER LEAKED (review)"
     assert c.get("/quiz?mode=review").status_code == 200
 
+    # readiness + coverage guarantee (§6d.4)
+    from app.engine import readiness as rmod
+    rd = rmod.readiness(conn)
+    assert isinstance(rd["exam_ready"], bool)
+    assert not rd["exam_ready"]  # smoke state is nowhere near ready
+    cov = rmod.coverage(conn)
+    assert cov[0]["total_subsections"] > 0
+    bs = compute_section_mastery(conn)
+    assert "fresh_pct" in bs[5] and "tier" in bs[5]
+
     # formula-sheet trainer
     ft = c.get("/formula-trainer")
     assert ft.status_code == 200

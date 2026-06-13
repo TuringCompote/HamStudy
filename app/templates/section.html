@@ -6,12 +6,13 @@
 
 <div class="section-head">
   <h1>{{ name }}</h1>
-  {% if stats.mastery_pct is not none %}
+  {% if stats.fresh_pct is not none %}
     <span class="section-mastery smeter-row">
-      <span class="smeter" style="width:120px" title="{{ stats.correct }}/{{ stats.answered }} correct">
-        <span class="smeter-fill tier-{{ stats.tier_css }}" style="width: {{ stats.mastery_pct }}%"></span>
+      <span class="smeter" style="width:120px" title="fresh: {{ stats.fresh_correct }}/{{ stats.fresh_answered }} correct">
+        <span class="smeter-fill tier-{{ stats.tier_css }}" style="width: {{ stats.fresh_pct }}%"></span>
       </span>
-      <span class="smeter-val">{{ stats.mastery_pct }}%</span>
+      <span class="smeter-val">{{ stats.fresh_pct }}%</span>
+      <span class="mrow-tier tier-text-{{ stats.tier_css }}">{{ stats.tier }}</span>
     </span>
   {% endif %}
 </div>

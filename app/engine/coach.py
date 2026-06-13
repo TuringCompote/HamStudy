@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import date
 
 from app.engine.mastery import compute_section_mastery, HONOURS_BAR
-from app.engine import scheduler
+from app.engine import scheduler, readiness as readiness_mod
 
 
 def day_streak(conn) -> int:
@@ -54,17 +54,25 @@ def mastered_count(conn) -> int:
 def dashboard_summary(conn, by_section: dict | None = None) -> dict:
     by_section = by_section or compute_section_mastery(conn)
     answered = sum(s["answered"] for s in by_section.values())
-    correct = sum(s["correct"] for s in by_section.values())
     bank_size = sum(s["size"] for s in by_section.values())
     mastered = mastered_count(conn)
+
+    # Exam readiness is FRESH-question accuracy (spec §8) — overall first-exposure.
+    fresh_a = sum(s["fresh_answered"] for s in by_section.values())
+    fresh_c = sum(s["fresh_correct"] for s in by_section.values())
+    rd = readiness_mod.readiness(conn, by_section)
+
     return {
-        "readiness_pct": round(100.0 * correct / answered, 1) if answered else None,
-        "sections_ready": sum(1 for s in by_section.values() if s["meets_honours"]),
+        "readiness_pct": round(100.0 * fresh_c / fresh_a, 1) if fresh_a else None,
+        "sections_ready": rd["sections_honours"],
         "streak": day_streak(conn),
         "mastered": mastered,
         "bank_size": bank_size,
         "mastered_pct": round(100.0 * mastered / bank_size, 1) if bank_size else 0.0,
         "review_due": scheduler.review_due_count(conn),
+        "exam_ready": rd["exam_ready"],
+        "coverage_pct": rd["coverage_pct"],
+        "blockers": rd["blockers"],
         "honours_bar": HONOURS_BAR,
         "answered": answered,
     }

@@ -54,6 +54,7 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .app-name { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.01em; }
 .readiness { text-align: right; }
 .readiness-val { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.ready-flag { color: var(--ok); font-weight: 700; font-size: 0.85rem; }
 
 .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3);
   margin-bottom: var(--sp-5); }
