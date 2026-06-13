@@ -19,12 +19,13 @@ from pydantic import BaseModel, Field
 from app.db import queries
 from app.db.init_db import connect
 from app.engine import mastery
-from app import quiz
+from app import quiz, config
 
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
+templates.env.globals["APP_NAME"] = config.APP_NAME  # available in every template
 
-app = FastAPI(title="HamStudy — Basic (Honours) trainer")
+app = FastAPI(title=f"{config.APP_NAME} — Canadian Basic (Honours) trainer")
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 
 

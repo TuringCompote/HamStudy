@@ -108,6 +108,38 @@ decisions, next step.
   dB, SWR/impedance, wavelength↔frequency), original per-section lesson text, and
   the Learn → Interact → Drill flow.
 
+---
+
+## 2026-06-13 — Alignment to updated docs (Elmer + instrument-panel design)
+
+**Context:** planning docs gained spec §0.2b + QUESTIONS #16/#17 — **app name
+`Elmer`** and an **"instrument panel"** visual direction. Phase 2 code predated
+these, so this is a cleanup pass before Phase 3 builds the SVG tools.
+
+**Done**
+- `APP_NAME = "Elmer"` in `config.py` (env-overridable, one-line changeable);
+  registered as a Jinja global. Removed all hardcoded "HamStudy" from templates +
+  FastAPI title (verified: 0 occurrences served, brand/title now "Elmer").
+- `app/static/tokens.css` — single source of design tokens: neutral base with
+  **light + dark** (via `prefers-color-scheme`), **one phosphor accent** (teal;
+  amber alt documented as a one-line swap), `--font-mono` for numbers/IDs/formula
+  values + `--font-sans` body, spacing/radius/border tokens. The Phase-3 SVG tools
+  will theme from these.
+- Refactored `style.css` to consume tokens throughout; mastery now renders as a
+  **segmented S-meter** (`.smeter`) colored by band via `mastery_band()` in the
+  engine (`tier-ok/warn/low`) — a placeholder wired to switch to depth-tier color
+  once Phase 4.5 computes `tier`.
+- Smoke test still green; verified real uvicorn boot + S-meter markup with data.
+
+**Decisions**
+- Accent defaults to **teal**; final teal-vs-amber call deferred (open item in
+  QUESTIONS) — swappable in one line in `tokens.css`.
+- S-meter color is mastery-band for now; the hook (`band` field) is in place so
+  Phase 4.5 can recolor by adaptive depth tier without template changes.
+
+**Next:** Phase 3 — concept tools (Ohm/reactance/dB/SWR/wavelength) as SVG+JS
+theming from `tokens.css`, original lesson text, Learn → Interact → Drill.
+
 **How to run**
 ```
 pip install -r requirements.txt

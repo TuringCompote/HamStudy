@@ -10,6 +10,10 @@ from pathlib import Path
 # Repo root = two levels up from this file (app/config.py -> repo root).
 ROOT = Path(__file__).resolve().parent.parent
 
+# App identity (QUESTIONS #16 / spec §0.2b). One-line changeable; never hardcode
+# the name elsewhere — read APP_NAME and theme from tokens.css.
+APP_NAME = os.environ.get("APP_NAME", "Elmer")
+
 # SQLite store. Prod points HAMSTUDY_DB at the NAS-backed volume; default is local.
 DB_PATH = Path(os.environ.get("HAMSTUDY_DB", ROOT / "data" / "hamstudy.db"))
 

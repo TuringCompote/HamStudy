@@ -20,6 +20,18 @@ HONOURS_BAR = 80.0
 PASS_BAR = 70.0
 
 
+def mastery_band(pct: float | None) -> str | None:
+    """S-meter color band for a mastery %. Phase-2 placeholder for the depth-tier
+    coloring that Phase 4.5 will drive: ok (≥80 Honours), warn (70–80), low (<70)."""
+    if pct is None:
+        return None
+    if pct >= HONOURS_BAR:
+        return "ok"
+    if pct >= PASS_BAR:
+        return "warn"
+    return "low"
+
+
 def compute_section_mastery(conn) -> dict[int, dict]:
     """Return {section: {name, answered, correct, mastery_pct, seen,
     size, coverage_pct, meets_honours}} for sections 1..8."""
@@ -62,6 +74,7 @@ def compute_section_mastery(conn) -> dict[int, dict]:
             "mastery_pct": mastery,
             "coverage_pct": coverage,
             "meets_honours": mastery is not None and mastery >= HONOURS_BAR,
+            "band": mastery_band(mastery),
         }
     return out
 

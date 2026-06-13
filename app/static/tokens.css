@@ -1,0 +1,62 @@
+/* tokens.css — the single source of design tokens (spec §0.2b).
+ *
+ * "Instrument panel": calm neutral base (light + dark), ONE phosphor accent
+ * (teal), monospace for numbers / question IDs / formula values, clean sans for
+ * body. Every stylesheet and every SVG concept tool themes from these variables
+ * so the look stays consistent across build phases. Lightweight — no framework.
+ *
+ * Accent is teal by default; flip --accent (+ --accent-dim/-ink) to the amber set
+ * below to change the whole instrument glow in one line. (QUESTIONS open item.)
+ */
+:root {
+  /* typography */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", "SF Mono",
+               "Consolas", monospace;
+
+  /* spacing / geometry */
+  --sp-1: 0.25rem; --sp-2: 0.5rem; --sp-3: 0.75rem; --sp-4: 1rem;
+  --sp-5: 1.5rem; --sp-6: 2rem;
+  --radius: 8px; --radius-sm: 5px;
+  --border-w: 1px;
+  --maxw: 880px;
+
+  /* phosphor accent (teal) — the one glow */
+  --accent: #14b8a6;
+  --accent-dim: #0e7c72;
+  --accent-ink: #062b27;          /* text on accent fills */
+  /* amber alternative (swap into the three above to retheme):
+     --accent: #f0a830; --accent-dim: #b4781a; --accent-ink: #2a1c02; */
+
+  /* status (also used as adaptive-tier colors on the S-meter, see app.css) */
+  --ok: var(--accent);            /* >=80% Honours / strong tier */
+  --warn: #e0a13a;                /* 70-80% pass-not-honours */
+  --bad: #d8533f;                 /* <70% weak / deep tier */
+
+  /* light theme (default) */
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef1f4;
+  --ink: #14201d;
+  --muted: #5d6b73;
+  --border: #d6dde2;
+  --track: #e3e9ed;               /* meter unlit segments */
+  --shadow: 0 1px 2px rgba(16, 32, 29, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1311;
+    --surface: #131a18;
+    --surface-2: #0f1614;
+    --ink: #e8efec;
+    --muted: #8a989f;
+    --border: #243029;
+    --track: #0a100e;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    /* accent reads a touch brighter on dark to keep the phosphor feel */
+    --accent: #2dd4bf;
+    --accent-dim: #149e90;
+    --accent-ink: #04201c;
+  }
+}

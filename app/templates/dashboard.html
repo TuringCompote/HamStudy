@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — HamStudy{% endblock %}
+{% block title %}Dashboard — {{ APP_NAME }}{% endblock %}
 {% block content %}
 
 <section class="summary">
@@ -29,10 +29,11 @@
         <td>{{ s.name }}</td>
         <td class="bar-cell">
           {% if s.mastery_pct is not none %}
-            <div class="bar" title="{{ s.correct }}/{{ s.answered }} correct">
-              <div class="bar-fill {{ 'ok' if s.meets_honours else 'warn' }}"
-                   style="width: {{ s.mastery_pct }}%"></div>
-              <span class="bar-label">{{ s.mastery_pct }}%</span>
+            <div class="smeter-row">
+              <span class="smeter" title="{{ s.correct }}/{{ s.answered }} correct">
+                <span class="smeter-fill tier-{{ s.band }}" style="width: {{ s.mastery_pct }}%"></span>
+              </span>
+              <span class="smeter-val">{{ s.mastery_pct }}%</span>
             </div>
           {% else %}
             <span class="muted">—</span>
