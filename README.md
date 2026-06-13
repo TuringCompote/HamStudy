@@ -64,7 +64,7 @@ reconstructs the DB (bank + committed seed, **no paid re-batch**), starts on por
 and registers a systemd unit so it comes up on boot:
 
 ```bash
-git clone <repo-url> /opt/elmer && cd /opt/elmer
+git clone https://github.com/TuringCompote/HamStudy /opt/elmer && cd /opt/elmer
 sudo PORT=80 ./deploy/install.sh
 ```
 
