@@ -31,6 +31,12 @@ class AnthropicProvider(AIProvider):
     def __init__(self):
         if not config.ANTHROPIC_API_KEY:
             raise RuntimeError("ANTHROPIC_API_KEY not set")
+        # Use the OS trust store for TLS (Windows Python lacks a CA bundle otherwise).
+        try:
+            import truststore
+            truststore.inject_into_ssl()
+        except Exception:
+            pass
         self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
         self._stub = StubProvider()
 
