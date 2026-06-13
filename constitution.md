@@ -65,6 +65,13 @@ fully skip**: readiness requires ≥80% in every section *and* minimum fresh-que
 of every subsection. Tiering and difficulty are **deterministic** (engine, not LLM); AI only
 condenses and explains. (Full design: spec §6d.)
 
+## 10b. Precompute explanations; reserve live AI for the personal
+Explanations of why an answer is right/wrong are the same for everyone, so **batch-generate
+them once for the whole bank** (Message Batches API, 50% off, + prompt caching) and store
+them — instant and ~free at study time. Reserve *live* Claude calls for what's genuinely
+per-user and real-time: misconception diagnosis and journal narrative. Regenerate the batch
+only when the bank revises. This never touches the deterministic loop. (Spec §6f.)
+
 ## 11. Spec-driven, logged, reversible
 For each phase: short spec → plan → tasks → implement. Append progress to `LOG.md`. Keep
 changes small and committed. Design for Advanced Qualification later, but Basic-with-Honours

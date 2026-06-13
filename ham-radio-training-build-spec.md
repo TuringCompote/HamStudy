@@ -518,6 +518,77 @@ the AI draws on a **curated local reference corpus** to ground what it writes. T
 
 ---
 
+## 6f. Batch-generated explanation layer (added 2026-06-13 — cost/perf optimization)
+
+Rather than calling Claude *live* on every missed question, **pre-generate an explanation
+for every question in the bank once, in bulk, via the Anthropic Message Batches API**, and
+store it. This is the single biggest cost/latency win available and it complements the
+budget guard (§0.1).
+
+### 6f.1 Why
+- **Batch API is 50% cheaper** than live calls (async, returns within 24h).
+- **Prompt caching** of the shared RIC reference prefix stacks on top (~90% off repeat
+  input). Together the one-time generation of all 984 explanations is a few dollars.
+- At study time, an explanation is then a **DB read — instant, zero live cost, no latency**.
+- The **live AI layer shrinks** to only what genuinely needs to be per-user and real-time:
+  misconception **diagnosis** (your specific recurring errors) and **journal narrative**.
+  Routine "what's the right answer and why" is precomputed.
+
+### 6f.2 What gets generated — generate RICH + STRUCTURED (superset)
+Generate at the **rich / mini-lesson end** of the spectrum (the user prefers more
+pre-generated than less; batch is cheap, storage is free). Crucially, generate it as
+**structured layers**, not one prose blob, so the app can reveal more or less without
+regenerating:
+
+- `core` — 1–2 sentences: why the correct answer is correct.
+- `distractors` — per wrong option: why it's wrong and why it's tempting.
+- `concept` — the underlying principle / formula / worked step, for a technically strong
+  learner (deep on the *why*, no hand-holding on basics).
+- `misconception` — the common trap this question targets.
+- `link` — pointer to the related interactive tool / section (§6b).
+- *(optional)* `mnemonic` / `edge_cases`.
+
+Store as structured JSON (in `explanations.explanation_md` or JSON columns), keyed by
+question `id` + `bank_version` so regeneration is clean. The depth spectrum: terse →
+standard → **rich (target)** → mini-lesson. We generate the superset once and let the app
+decide how much to show.
+
+### 6f.5 Adaptivity is preserved (two layers)
+Precomputing the content does **not** remove adaptivity — it enables it:
+
+1. **Progressive disclosure (deterministic, free).** The app shows a default depth based on
+   the user's §6d tier/ability for that subsection: a *deep* section surfaces the full
+   stack (core + distractors + concept + misconception); a *test-out* section shows only
+   `core` with a "go deeper" expander. Same stored layers, adaptive reveal, zero extra cost.
+2. **Live personalization (the per-user bit).** The precomputed text explains the question
+   in general; the live `diagnose()` call (§6f.4, budget-gated) ties it to *this user's*
+   actual recent error pattern ("third reactance miss the same way — here's the specific
+   misconception"). That stays live because it depends on history.
+
+### 6f.3 How (pipeline)
+1. After ingest (questions table populated), build a JSONL batch: one request per question,
+   each sharing a **cached system/reference prefix** (RIC snippets + style instructions) and
+   a per-question user block (stem, options, correct index, section/subsection).
+2. Submit via the Batch API; poll until complete (≤24h, usually much faster).
+3. Write results back into `notes` / `explanations`, tagged with `bank_version` and the
+   model used. Validate coverage (every question got an explanation).
+4. **Regenerate only when the bank revises** (next ISED update → new `bank_version`) — a
+   roughly once-a-year cost, not per-session.
+
+### 6f.4 Runtime behaviour
+- Drill/review shows the stored explanation instantly on a miss (or on request).
+- The live `AIProvider` is reserved for `diagnose()` (per-user misconception analysis) and
+  `narrate()` (journal). `explain()` becomes a cache-first lookup that only falls back to a
+  live call if a stored explanation is somehow missing.
+- The budget guard (§0.1) still wraps any live call; precomputation just means it rarely
+  fires.
+
+> This keeps the **deterministic core untouched** — batch generation is a build/maintenance
+> step, not part of the closed loop. It only makes the *explanation* content cheaper and
+> instant; it never feeds the mastery/scheduling/readiness math.
+
+---
+
 ## 7. Data model
 
 Single source of truth, file- or SQLite-based (keep it simple and portable).
@@ -531,9 +602,13 @@ text          TEXT
 options       JSON       -- ["...","...","...","..."]
 correct_index INT
 bank_version  TEXT       -- effective date of the source bank (e.g. "2025-07-15")
-notes         TEXT       -- optional original explanation written by the coach
+notes         TEXT       -- pre-generated "why" explanation (§6f), batch-written + cached
 difficulty_b  REAL       -- IRT-lite difficulty (§6d.3); starts at section mean, updated online
 ```
+
+> **`explanations`** (optional, preferred over inlining in `notes`): `question_id`,
+> `bank_version`, `model`, `explanation_md`, `generated_at`. Lets a bank revision regenerate
+> cleanly while keeping old text for diffing. Populated by the §6f batch pipeline.
 
 **`attempts`** (every answer the user gives — the loop's ground-truth event log; append-only):
 ```
