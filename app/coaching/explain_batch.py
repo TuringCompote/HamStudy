@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import anthropic
 
@@ -224,3 +225,54 @@ def _client():
     except Exception:
         pass
     return anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+
+
+# --- portable seed (commit the batch asset so it travels with the repo) ------
+def export_explanations(conn, path: Path) -> int:
+    """Dump all stored explanations to JSONL — a committable seed so a fresh
+    clone/LXC can reconstruct the DB without re-running the paid batch."""
+    rows = conn.execute(
+        "SELECT question_id, bank_version, model, layers, generated_at "
+        "FROM explanations ORDER BY question_id"
+    ).fetchall()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps({k: r[k] for k in r.keys()}, ensure_ascii=False) + "\n")
+    return len(rows)
+
+
+def import_explanations(conn, path: Path) -> int:
+    """Load explanations from a seed JSONL into the `explanations` table (upsert).
+    Run AFTER ingest so question_id foreign keys exist."""
+    n = 0
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            r = json.loads(line)
+            conn.execute(
+                "INSERT INTO explanations(question_id,bank_version,model,layers,generated_at) "
+                "VALUES (?,?,?,?,?) ON CONFLICT(question_id,bank_version) DO UPDATE SET "
+                "model=excluded.model, layers=excluded.layers, generated_at=excluded.generated_at",
+                (r["question_id"], r["bank_version"], r["model"], r["layers"], r["generated_at"]))
+            n += 1
+    conn.commit()
+    return n
+
+
+if __name__ == "__main__":
+    import argparse
+    from app.db.init_db import connect
+
+    ap = argparse.ArgumentParser(description="Explanation batch seed export/import.")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    pe = sub.add_parser("export"); pe.add_argument("--path", required=True, type=Path)
+    pi = sub.add_parser("import"); pi.add_argument("--path", required=True, type=Path)
+    args = ap.parse_args()
+    conn = connect()
+    if args.cmd == "export":
+        print(f"exported {export_explanations(conn, args.path)} explanations -> {args.path}")
+    else:
+        print(f"imported {import_explanations(conn, args.path)} explanations from {args.path}")

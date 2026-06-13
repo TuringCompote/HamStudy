@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # App code only — DB + secrets + downloaded refs come from mounts/env, not the image.
 COPY app ./app
 COPY prompts ./prompts
+COPY seed ./seed
 
 EXPOSE 8000
 

@@ -67,27 +67,38 @@ payload — only on submit.
 
 ## Deploy (Phase 6) — one container in a Proxmox LXC, LAN/VPN-only
 
-> ⚠️ **Preserve `data/hamstudy.db`.** It holds the 984 questions, the **batch-generated
-> explanations** (a one-time paid build), and your append-only `attempts`. Copy it into the
-> deploy volume — do **not** start with an empty DB or re-run the batch.
+### One-shot install (recommended)
+On a fresh Debian/Ubuntu LXC — clone, run the script, done. It installs Docker, builds the
+image, reconstructs the database from the **free ISED bank + the committed explanation seed**
+(`seed/explanations.jsonl` — no paid re-batch), and starts the app on your port.
 
 ```bash
-# On the LXC (Docker + compose installed):
-# 1. Put your built DB on the NAS-backed volume the compose mounts:
-mkdir -p data && cp /path/to/hamstudy.db data/hamstudy.db
-
-# 2. Secrets + optional bind/port (never commit .env):
-#    ANTHROPIC_API_KEY=sk-ant-...
-#    BIND_IP=10.0.0.42      # optional: bind to the LXC LAN IP (default: all interfaces)
-#    PORT=8000
-$EDITOR .env
-
-# 3. Build + run:
-docker compose up -d --build
-docker compose ps           # healthcheck hits /api/health
+git clone <your-repo-url> /opt/elmer
+cd /opt/elmer
+sudo PORT=80 ./deploy/install.sh
 ```
 
-Reach it at `http://<lxc-hostname>:8000` on the LAN, or over the home VPN remotely.
+It prompts once for an Anthropic API key (**optional** — leave blank to run fully on the
+deterministic engine + the cached batch explanations; add it later in `.env` for live
+diagnose/journal). Then reach it at `http://<lxc-ip-or-fqdn>:80` via your local DNS.
+Re-running the script preserves an existing `data/hamstudy.db` (your attempts are never lost).
+
+> ⚠️ **`data/hamstudy.db` is your durable state** — questions, the batch explanations, and your
+> append-only `attempts`. The installer rebuilds it only when it's absent; otherwise it's left
+> alone. Back it up to the NAS (below).
+
+### Manual (if you prefer)
+```bash
+$EDITOR .env                       # ANTHROPIC_API_KEY (optional), PORT=80, BIND_IP=<lan-ip>
+docker compose build
+docker compose run --rm elmer sh -c "python -m app.db.fetch_sources && \
+  python -m app.db.ingest && python -m app.db.validate && \
+  python -m app.coaching.explain_batch import --path /app/seed/explanations.jsonl"
+docker compose up -d
+docker compose ps                  # healthcheck hits /api/health
+```
+
+Reach it at `http://<lxc-hostname>:<PORT>` on the LAN, or over the home VPN remotely.
 **No reverse proxy / no Cloudflare** — restrict access at the LXC/VPN layer.
 
 **Set a hard spend limit in the Anthropic Console** (Billing → limits, e.g. $15/mo). The
