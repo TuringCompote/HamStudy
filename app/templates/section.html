@@ -72,6 +72,33 @@
     Drill Section {{ section }}</a>
 </section>
 
+<!-- Coach: live per-user misconception diagnosis (§6f) -->
+<section class="coach">
+  <h2 class="step-h"><span class="step">★</span> Coach</h2>
+  <p class="muted">Once you've drilled a bit, ask why your misses here keep happening.</p>
+  <button class="btn" type="button" id="diag-btn" data-section="{{ section }}">
+    Why do I keep missing this?</button>
+  <div id="diag-out" class="tool-readout hidden"></div>
+</section>
+<script>
+document.getElementById("diag-btn").addEventListener("click", async function () {
+  const out = document.getElementById("diag-out");
+  this.disabled = true; const label = this.textContent; this.textContent = "Thinking…";
+  try {
+    const r = await fetch("/api/diagnose", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section: Number(this.dataset.section) }),
+    });
+    const j = await r.json();
+    out.textContent = j.text + (j.degraded ? "  (AI off — set an API key for a tailored diagnosis)" : "");
+  } catch (e) {
+    out.textContent = "Couldn't get a diagnosis: " + e.message;
+  }
+  out.classList.remove("hidden");
+  this.textContent = label; this.disabled = false;
+});
+</script>
+
 {% endblock %}
 {% block scripts %}
 {% if tools %}

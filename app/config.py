@@ -43,17 +43,19 @@ JOURNAL_DIR = Path(os.environ.get("HAMSTUDY_JOURNAL", ROOT / "data" / "journal")
 
 # AI layer (spec §0.1 / QUESTIONS #13/#15). Key from env — never hardcode.
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-AI_MODEL = os.environ.get("HAMSTUDY_AI_MODEL", "claude-opus-4-8")
-AI_MODEL_CHEAP = os.environ.get("HAMSTUDY_AI_MODEL_CHEAP", "claude-haiku-4-5")
+AI_MODEL = os.environ.get("HAMSTUDY_AI_MODEL", "claude-opus-4-8")        # best (one-time batch)
+AI_MODEL_MID = os.environ.get("HAMSTUDY_AI_MODEL_MID", "claude-sonnet-4-6")  # live reasoning
+AI_MODEL_CHEAP = os.environ.get("HAMSTUDY_AI_MODEL_CHEAP", "claude-haiku-4-5")  # phrasing
 AI_MONTHLY_BUDGET_USD = float(os.environ.get("HAMSTUDY_AI_BUDGET", "15"))
 
-# Per-call-type model routing (configurable). Reasoning + content grounded in the
-# reference docs stays on Opus for quality (explain/diagnose/condense); plain-language
-# phrasing (narrate) routes to the cheaper model. Override per type via env.
+# Per-call-type model routing (configurable). LIVE calls avoid Opus (cost/credits):
+# reasoning (explain-fallback / diagnose / condense) -> Sonnet, phrasing -> Haiku.
+# The one-time batch was generated on Opus (highest quality); a re-batch can opt back
+# to Opus via HAMSTUDY_MODEL_EXPLAIN when credits allow.
 AI_MODELS = {
-    "explain": os.environ.get("HAMSTUDY_MODEL_EXPLAIN", AI_MODEL),
-    "diagnose": os.environ.get("HAMSTUDY_MODEL_DIAGNOSE", AI_MODEL),
-    "condense": os.environ.get("HAMSTUDY_MODEL_CONDENSE", AI_MODEL),
+    "explain": os.environ.get("HAMSTUDY_MODEL_EXPLAIN", AI_MODEL_MID),
+    "diagnose": os.environ.get("HAMSTUDY_MODEL_DIAGNOSE", AI_MODEL_MID),
+    "condense": os.environ.get("HAMSTUDY_MODEL_CONDENSE", AI_MODEL_MID),
     "narrate": os.environ.get("HAMSTUDY_MODEL_NARRATE", AI_MODEL_CHEAP),
 }
 

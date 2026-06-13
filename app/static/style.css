@@ -229,6 +229,28 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .prop-ground { fill: color-mix(in srgb, var(--ink) 25%, var(--surface)); }
 .prop-ray { fill: none; stroke: var(--accent); stroke-width: 2.5; }
 
+/* journal week view */
+.jr-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+.jr-week { display: flex; align-items: stretch; gap: var(--sp-2); margin-top: var(--sp-3); }
+.jr-nav { padding: 0 var(--sp-3); font-size: 1.1rem; }
+.jr-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--sp-2); flex: 1; }
+.jr-day { display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--sp-2) 0; border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--muted); cursor: default; }
+.jr-day .jr-wd { font-size: 0.7rem; }
+.jr-day .jr-dn { font-size: 1rem; font-weight: 600; }
+.jr-day.lit { color: var(--ink); cursor: pointer; border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.jr-day.lit .jr-dn { color: var(--accent); }
+.jr-day.today { outline: 2px solid var(--accent); outline-offset: -1px; }
+.jr-day:disabled { opacity: 0.55; }
+.jr-range { margin-top: var(--sp-2); }
+.jr-entry { margin-top: var(--sp-4); }
+.jr-entry.on { background: var(--surface); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow); }
+.jr-entry h1 { font-size: 1.2rem; }
+.jr-entry h1:first-child { margin-top: 0; }
+
 /* ---- mobile / narrow screens (iPhone etc.) ---- */
 @media (max-width: 640px) {
   .container { padding: var(--sp-4) var(--sp-3); }

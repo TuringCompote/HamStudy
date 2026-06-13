@@ -463,6 +463,28 @@ re-batch" warning).
 deferred niceties (trend/decay window, tier-scaled lesson depth, §6d.6 "Tuned for
 you" content_cache, diagnose() UI). v1 Definition of Done (AGENT.md) is met.
 
+---
+
+## 2026-06-13 — post-deploy polish: mobile, journal view, diagnose() wired, model reroute
+
+- **Mobile/responsive dashboard** + the real **S-meter bug fix** (fill `<span>` was
+  `display:inline` → width ignored → bars never lit; now `display:block`, px-only
+  notches). Verified server emits correct tier+width.
+- **Journal week view** (`/journal` + `journal.js`): 7-day strip, prev/next weeks,
+  current week default, journaled days lit + clickable → renders that day's entry.
+  Endpoints `/api/journal/dates` + `/api/journal/entry/{date}` (date-validated).
+  Dashboard links to it; UI files mounted so CSS/JS pull without rebuild.
+- **diagnose() wired** — section-page "Why do I keep missing this?" →
+  `/api/diagnose` builds a deterministic per-section miss summary
+  (`analysis.section_miss_summary`) → live `diagnose()` (budget-gated, grounded for
+  regs); friendly note when no misses.
+- **Model reroute (Chris out of Opus credits):** live calls now Sonnet (explain-
+  fallback/diagnose/condense) + Haiku (narrate); Opus reserved for the one-time
+  batch only. `AI_MODEL_MID` added; all env-overridable.
+
+**Deploy note:** this batch of changes touches Python (main/config/analysis), so the
+LXC needs `git pull && docker compose up -d --build` (UI-only tweaks alone wouldn't).
+
 **How to run**
 ```
 pip install -r requirements.txt

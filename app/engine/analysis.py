@@ -96,6 +96,33 @@ def most_missed(conn, limit: int = 10) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def section_miss_summary(conn, section: int, limit: int = 5) -> str:
+    """Deterministic plain-text summary of a section's recurring misses, to hand
+    to the live `diagnose()` call. Empty string when there are no misses."""
+    rows = conn.execute(
+        """
+        SELECT a.question_id, q.text, SUM(1 - a.correct) misses, COUNT(*) n
+        FROM attempts a JOIN questions q ON q.id = a.question_id
+        WHERE a.section = ?
+        GROUP BY a.question_id HAVING misses > 0
+        ORDER BY misses DESC, n DESC, a.question_id
+        LIMIT ?
+        """,
+        (section, limit),
+    ).fetchall()
+    if not rows:
+        return ""
+    wc = wrong_classification(conn).get(section, {"fast_wrong": 0, "slow_wrong": 0})
+    lines = [
+        f"fast-wrong (confident but wrong → likely misconception): {wc['fast_wrong']}; "
+        f"slow-wrong (hesitant/guessing → not yet learned): {wc['slow_wrong']}.",
+        "Most-missed questions (times wrong):",
+    ]
+    for r in rows:
+        lines.append(f"- ({r['misses']}× wrong) {r['text']}")
+    return "\n".join(lines)
+
+
 def wrong_classification(conn) -> dict[int, dict]:
     """Per section: fast-wrong (misconception) vs slow-wrong (not learned) counts,
     over all wrong attempts that recorded a response time."""

@@ -8,6 +8,7 @@ Run:  uvicorn app.main:app --reload
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -18,7 +19,7 @@ from pydantic import BaseModel, Field
 
 from app.db import queries
 from app.db.init_db import connect
-from app.engine import mastery, coach, diagnostic, recommend
+from app.engine import mastery, coach, diagnostic, recommend, analysis
 from app import quiz, config, tools, content, formulas
 from app.coaching.ai_provider import get_provider
 from app.coaching import journal as journal_mod, usage as usage_mod, corpus as corpus_mod
@@ -29,6 +30,8 @@ templates = Jinja2Templates(directory=str(BASE / "templates"))
 templates.env.globals["APP_NAME"] = config.APP_NAME  # available in every template
 
 app = FastAPI(title=f"{config.APP_NAME} — Canadian Basic (Honours) trainer")
+
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 
 
@@ -55,6 +58,10 @@ class DiagnosticRequest(BaseModel):
 class ExplainRequest(BaseModel):
     question_id: str
     chosen_index: int = Field(ge=0, le=3)
+
+
+class DiagnoseRequest(BaseModel):
+    section: int = Field(ge=1, le=8)
 
 
 # --- pages ---
@@ -226,6 +233,27 @@ def api_explain(req: ExplainRequest):
             "model": result.model, "cost_usd": round(result.cost_usd, 6)}
 
 
+@app.post("/api/diagnose")
+def api_diagnose(req: DiagnoseRequest):
+    """Live per-user misconception diagnosis for a section (Sonnet, budget-gated).
+    Builds the miss summary deterministically from attempts; falls back to the stub
+    when over budget / no key. Returns a friendly note when there are no misses."""
+    conn = connect()
+    try:
+        summary = analysis.section_miss_summary(conn, req.section)
+        name = queries.SECTION_NAMES[req.section]
+        grounding = corpus_mod.ground_for_section(req.section)
+    finally:
+        conn.close()
+    if not summary:
+        return {"text": "No recurring misses in this section yet — drill some questions "
+                        "and come back.", "degraded": False, "model": "-",
+                "cost_usd": 0.0, "empty": True}
+    res = get_provider().diagnose(section_name=name, miss_summary=summary, grounding=grounding)
+    return {"text": res.text, "degraded": res.degraded, "model": res.model,
+            "cost_usd": round(res.cost_usd, 6), "empty": False}
+
+
 @app.post("/api/journal")
 def api_journal():
     conn = connect()
@@ -233,6 +261,43 @@ def api_journal():
         return journal_mod.write_journal(conn)
     finally:
         conn.close()
+
+
+@app.get("/journal", response_class=HTMLResponse)
+def journal_page(request: Request):
+    return templates.TemplateResponse(request, "journal.html", {})
+
+
+@app.get("/api/journal/dates")
+def api_journal_dates():
+    conn = connect()
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT entry_date FROM journal ORDER BY entry_date"
+        ).fetchall()
+    finally:
+        conn.close()
+    return {"dates": [r["entry_date"] for r in rows]}
+
+
+@app.get("/api/journal/entry/{entry_date}")
+def api_journal_entry(entry_date: str):
+    if not _DATE_RE.match(entry_date):       # guard against path traversal / junk
+        raise HTTPException(400, "date must be YYYY-MM-DD")
+    conn = connect()
+    try:
+        row = conn.execute(
+            "SELECT file_path, summary FROM journal WHERE entry_date=? ORDER BY id DESC LIMIT 1",
+            (entry_date,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        raise HTTPException(404, "no journal entry for that date")
+    import markdown as _md
+    p = Path(row["file_path"])
+    text = p.read_text(encoding="utf-8") if p.exists() else (row["summary"] or "")
+    return {"date": entry_date, "html": _md.markdown(text, extensions=["extra"])}
 
 
 @app.get("/api/ai-status")

@@ -176,6 +176,24 @@ def main() -> None:
     assert jr["degraded"] is True
     assert Path(jr["path"]).exists()
 
+    # journal week view
+    from datetime import date as _date
+    assert c.get("/journal").status_code == 200
+    dts = c.get("/api/journal/dates").json()["dates"]
+    today = _date.today().isoformat()
+    assert today in dts                                  # just wrote it above
+    assert c.get(f"/api/journal/entry/{today}").json()["html"]
+    assert c.get("/api/journal/entry/not-a-date").status_code == 400
+    assert c.get("/api/journal/entry/2000-01-01").status_code == 404
+
+    # diagnose (stub-forced): section 5 has a wrong attempt -> real summary -> stub;
+    # a section with no attempts -> friendly empty note
+    dg = c.post("/api/diagnose", json={"section": 5}).json()
+    assert dg["text"] and dg["empty"] is False and dg["degraded"] is True
+    dg2 = c.post("/api/diagnose", json={"section": 2}).json()
+    assert dg2["empty"] is True
+    assert analysis.section_miss_summary(conn, 5)        # deterministic, non-empty
+
     # formula-sheet trainer
     ft = c.get("/formula-trainer")
     assert ft.status_code == 200
