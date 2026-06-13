@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from app.db import queries
 from app.db.init_db import connect
 from app.engine import mastery, coach
-from app import quiz, config, tools, content
+from app import quiz, config, tools, content, formulas
 
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
@@ -79,6 +79,13 @@ def section_page(request: Request, section: int):
             "tools": tools.tools_for_section(section),
             "stats": stats,
         },
+    )
+
+
+@app.get("/formula-trainer", response_class=HTMLResponse)
+def formula_trainer(request: Request):
+    return templates.TemplateResponse(
+        request, "formula_trainer.html", {"formulas": formulas.FORMULAS},
     )
 
 

@@ -58,12 +58,15 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
       `section.html`; tools mounted via `static/tools/registry.js` (data-tool framework).
       *(Browser visual/interaction check still recommended — JS untested headless.)*
 
-## Phase 4 — Spaced repetition + review queue
+## Phase 4 — Spaced repetition + review queue  *(DONE 2026-06-13)*
 - [x] (P0) Deterministic scheduler: ease/interval per question (Leitner). `app/engine/scheduler.py`
       — Leitner boxes from `attempts` (one outcome/day), box→interval, due_date; idempotent.
 - [x] (P0) Review queue surfacing previously-missed questions. `quiz.build_review` +
       `/quiz?mode=review` + `/api/quiz` review mode; dashboard "N due" button; immediate feedback.
-- [ ] Formula-sheet trainer using the **unlabelled** ISED aid sheet (exam-legal sheet).
+- [x] Formula-sheet trainer using the **unlabelled** ISED aid sheet (exam-legal sheet).
+      `/formula-trainer` + `formulatrainer.js` — flashcards over an original curated set
+      (`app/formulas.py`), two directions, missed cards requeue. Trains recognizing the
+      unlabelled sheet's formulas (no PDF reproduced).
 
 ## Phase 4.5 — Adaptive learning engine (§6d)  *(the per-section adaptivity Chris asked for)*
 - [ ] (P0) Diagnostic placement: short per-section probe (6–10 Q) + optional self-declared

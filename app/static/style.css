@@ -191,6 +191,19 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .bp-lock { text-align: right; font-size: 0.85rem; }
 .bp-row.on .bp-lock { color: var(--accent); }
 
+/* formula-sheet trainer */
+.ft-card { background: var(--surface); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius); padding: var(--sp-6) var(--sp-5); margin-top: var(--sp-3);
+  min-height: 7rem; box-shadow: var(--shadow); text-align: center; }
+.ft-prompt { font-size: 1.25rem; font-weight: 600; }
+.ft-formula { font-size: 1.4rem; margin: var(--sp-2) 0; }
+.ft-hint { margin-top: var(--sp-3); }
+.ft-back { margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: var(--border-w) solid var(--border); }
+.ft-finds { font-size: 1.05rem; margin: var(--sp-2) 0; }
+.ft-vars { margin-top: var(--sp-2); }
+.ft-done { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
+.dash-links { margin-top: var(--sp-5); display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+
 /* propagation scene */
 .prop-sky { fill: var(--surface-2); }
 .prop-sky.is-day { fill: color-mix(in srgb, #6fb3ff 14%, var(--surface)); }

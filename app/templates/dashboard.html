@@ -84,4 +84,10 @@
   </div>
 </section>
 
+<section class="dash-links">
+  <a class="btn" href="/quiz?mode=exam">100-question mock exam</a>
+  {% if summary.review_due %}<a class="btn" href="/quiz?mode=review">Review ({{ summary.review_due }} due)</a>{% endif %}
+  <a class="btn" href="/formula-trainer">Formula-sheet trainer</a>
+</section>
+
 {% endblock %}

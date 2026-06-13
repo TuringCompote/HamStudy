@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Formula-sheet trainer — {{ APP_NAME }}{% endblock %}
+{% block content %}
+
+<nav class="crumbs"><a href="/">Dashboard</a> &rsaquo; <span class="mono">Formula trainer</span></nav>
+
+<h1>Formula-sheet trainer</h1>
+<p class="muted">
+  The real exam lets you use the ISED <strong>unlabelled</strong> formula sheet — so the
+  skill is recognizing each formula and knowing what it computes. Flip the cards, rate
+  yourself, and the ones you miss come back around.
+</p>
+
+<div id="formula-trainer"
+     data-formulas='{{ formulas | tojson }}'></div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/tools/registry.js"></script>
+<script src="/static/tools/formulatrainer.js"></script>
+{% endblock %}

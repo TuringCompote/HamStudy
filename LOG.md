@@ -258,6 +258,22 @@ theming from `tokens.css`, original lesson text, Learn → Interact → Drill.
 **Next:** formula-sheet trainer (non-P0, using the unlabelled exam sheet), then
 Phase 4.5 (adaptive engine) / Phase 5 (close the loop + AI layer).
 
+**Formula-sheet trainer (same session — Phase 4 complete)**
+- `/formula-trainer` + `static/tools/formulatrainer.js`: flashcards over an
+  **original curated formula set** (`app/formulas.py`, 21 staples) — two directions
+  ("find → formula" / "formula → find"), self-rated, missed cards requeue. Trains
+  recognizing the **unlabelled** exam sheet's formulas without reproducing the PDF
+  (constitution §3). Linked from the dashboard (+ mock exam + review buttons).
+- Smoke test covers the trainer page/asset/data. All green. **Phase 4 done.**
+
+**Git note:** Phase 4 commits are LOCAL — `git push` was denied this session, so
+`origin` is behind by the scheduler/review commit + the formula-trainer commit.
+Push when ready.
+
+**Next:** Phase 4.5 (adaptive engine: diagnostic placement, real depth tiers,
+Elo/IRT-lite θ-aware selection, coverage guarantee) or Phase 5 (close the loop +
+Anthropic AI layer + the §6d.6 corpus/RAG content).
+
 **How to run**
 ```
 pip install -r requirements.txt

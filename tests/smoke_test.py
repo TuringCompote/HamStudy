@@ -111,6 +111,14 @@ def main() -> None:
     assert all("correct_index" not in q for q in rv["questions"]), "ANSWER LEAKED (review)"
     assert c.get("/quiz?mode=review").status_code == 200
 
+    # formula-sheet trainer
+    ft = c.get("/formula-trainer")
+    assert ft.status_code == 200
+    assert "formula-trainer" in ft.text and "data-formulas" in ft.text
+    assert c.get("/static/tools/formulatrainer.js").status_code == 200
+    from app import formulas as _f
+    assert len(_f.FORMULAS) >= 15
+
     # pages render
     assert c.get("/quiz?mode=exam").status_code == 200
     assert c.get("/quiz?mode=drill&section=3").status_code == 200
