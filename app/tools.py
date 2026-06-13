@@ -37,13 +37,29 @@ TOOLS: dict[str, dict] = {
         "blurb": "Convert f ↔ λ and size a ½λ dipole or ¼λ vertical.",
         "js": "/static/tools/wavelength.js",
     },
+    "seriesparallel": {
+        "name": "Series / Parallel R & C",
+        "blurb": "Combine resistors or capacitors in series or parallel; see the schematic.",
+        "js": "/static/tools/seriesparallel.js",
+    },
+    "bandplan": {
+        "name": "Canadian Band-Plan Explorer",
+        "blurb": "Amateur bands, the qualification each needs, and primary/secondary status.",
+        "js": "/static/tools/bandplan.js",
+    },
+    "propagation": {
+        "name": "Propagation & the Ionosphere",
+        "blurb": "Day vs night layers; watch a signal refract below the MUF or punch through.",
+        "js": "/static/tools/propagation.js",
+    },
 }
 
 # section number -> ordered list of tool ids shown on that section's page.
 SECTION_TOOLS: dict[int, list[str]] = {
-    4: [],                                   # Circuit Components (series/parallel tool later)
+    4: ["seriesparallel"],                   # Circuit Components
     5: ["ohms", "reactance", "decibel"],     # Basic Electronics & Theory
     6: ["swr", "wavelength"],                # Feedlines & Antenna Systems
+    # 1: ["bandplan"], 7: ["propagation"]  — tools written but not yet wired (pending)
 }
 
 
