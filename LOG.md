@@ -356,6 +356,35 @@ a fraction of a cent). **Remaining for 3/3:** per-call-type model routing
 (Opus explain/diagnose, optional Haiku narrate), externalized prompt files, RIC
 prompt-cache corpus, evals/. (Status + plan posted; awaiting OK.)
 
+---
+
+## 2026-06-13 — Phase 5 (§6f) batch-explanation prep + model comparison
+
+**Prep done** (per Chris's instructions):
+- `prompts/batch_explain.md` tightened: cite regs/section numbers ONLY when present
+  in the supplied grounding (never fabricate); `link` restricted to real tools/
+  sections or `null`; distractors keyed to the real option letter.
+- `explain_batch.py` schema hardened: `option` enum A/B/C/D, `link` nullable.
+- TLS fix: `truststore` (OS cert store) so live Anthropic calls work on Windows.
+
+**Opus vs Sonnet comparison** (8 Q: 4 §5 no-grounding + 4 §1 with RBR-4/RIC
+grounding; `evals/ai_layer/model_compare.md`). Live cost: Opus $0.207, Sonnet
+$0.105. Both: 3 distractors, valid letters, electronics no citations, regs cite
+from grounding. **Grounding fidelity verified against the corpus** — every cited
+reference (RBR-4 §13 change-of-address/30-day, "section 45 of the Radiocommunication
+Regulations", Schedule I, §8 Interference) is REAL and grounded; no fabrication
+from either model.
+- Distractor nuance: comparable (Sonnet slightly more verbose, Opus tighter).
+- Precision: Opus pulled an extra correct grounded citation (§8) and returned
+  `link: null` when no tool fit (Sonnet defaulted to "section 1").
+- **Recommendation: Opus** — Sonnet is close but not *clearly indistinguishable*;
+  for write-once-read-forever content the ~$5–7 one-time saving isn't worth Opus's
+  precision/conservatism edge. (Awaiting Chris's pick before submitting the batch.)
+
+**Full-batch cost estimate:** ~$12–17 one-time on Opus @ 50% batch (output ~$9 +
+input $3 cached / $7.6 uncached), regs grounding ordered together w/ 1h cache.
+Batch NOT yet submitted.
+
 **How to run**
 ```
 pip install -r requirements.txt

@@ -28,7 +28,7 @@ LAYER_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "option": {"type": "string"},
+                    "option": {"type": "string", "enum": ["A", "B", "C", "D"]},
                     "why_wrong": {"type": "string"},
                     "why_tempting": {"type": "string"},
                 },
@@ -38,7 +38,7 @@ LAYER_SCHEMA = {
         },
         "concept": {"type": "string"},
         "misconception": {"type": "string"},
-        "link": {"type": "string"},
+        "link": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "mnemonic": {"type": "string"},
         "edge_cases": {"type": "string"},
     },
