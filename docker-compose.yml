@@ -11,6 +11,11 @@ services:
     volumes:
       - ./data:/app/data      # SQLite (questions + the 984 explanations + attempts),
                               # recommendation.json, journal/ — persist on the NAS-backed path
+      # UI served from the repo working tree so `git pull` applies CSS/JS/template
+      # tweaks without an image rebuild (static = live; templates = after a restart).
+      - ./app/static:/app/app/static:ro
+      - ./app/templates:/app/app/templates:ro
+      - ./app/content:/app/app/content:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c",

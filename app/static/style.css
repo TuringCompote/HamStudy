@@ -61,7 +61,7 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .stat { background: var(--surface); border: var(--border-w) solid var(--border);
   border-radius: var(--radius); padding: var(--sp-4); box-shadow: var(--shadow); }
 .stat-label { color: var(--muted); font-size: 0.85rem; margin-bottom: var(--sp-2); }
-.stat-val { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+.stat-val { font-size: 1.7rem; font-weight: 700; line-height: 1; white-space: nowrap; }
 
 .session-card { background: var(--surface); border: var(--border-w) solid var(--border);
   border-radius: var(--radius); padding: var(--sp-5); margin-bottom: var(--sp-6);
@@ -78,8 +78,8 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .mrow:hover { background: var(--surface-2); }
 .mrow-name { font-weight: 600; }
 .mrow-meter { width: 100%; }
-.mrow-pct { text-align: right; font-weight: 600; min-width: 3.2rem; }
-.mrow-tier { text-align: right; font-size: 0.85rem; min-width: 4.5rem; }
+.mrow-pct { text-align: right; font-weight: 600; min-width: 3.6rem; white-space: nowrap; }
+.mrow-tier { text-align: right; font-size: 0.85rem; min-width: 4.5rem; white-space: nowrap; }
 .tier-text-testout  { color: var(--tier-testout); }
 .tier-text-light    { color: var(--tier-light); }
 .tier-text-standard { color: var(--tier-standard); }
@@ -228,6 +228,33 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .prop-ground { fill: color-mix(in srgb, var(--ink) 25%, var(--surface)); }
 .prop-ray { fill: none; stroke: var(--accent); stroke-width: 2.5; }
 
+/* ---- mobile / narrow screens (iPhone etc.) ---- */
+@media (max-width: 640px) {
+  .container { padding: var(--sp-4) var(--sp-3); }
+  .dash-head { flex-wrap: wrap; gap: var(--sp-3); }
+  .app-name { font-size: 1.3rem; }
+  .readiness { text-align: left; }
+  .readiness-val { font-size: 1.6rem; }
+
+  /* 4 stat cards -> 2x2; smaller value so "0 / 8" never wraps */
+  .stat-cards { grid-template-columns: repeat(2, 1fr); }
+  .stat-val { font-size: 1.4rem; }
+
+  /* section rows: name + % + tier on one line, meter full-width below */
+  .mrow {
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas: "name pct tier" "meter meter meter";
+    column-gap: var(--sp-3);
+    row-gap: var(--sp-2);
+    padding: var(--sp-3) 0;
+  }
+  .mrow-name { grid-area: name; }
+  .mrow-pct  { grid-area: pct; }
+  .mrow-tier { grid-area: tier; min-width: 0; }
+  .mrow-meter { grid-area: meter; }
+  .smeter { height: 1.1rem; }
+}
+
 /* quiz */
 .quiz-head { display: flex; justify-content: space-between; align-items: baseline; }
 .quiz-head small { color: var(--muted); font-weight: 400; font-size: 0.9rem; }
@@ -262,7 +289,7 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .exp-list { margin: var(--sp-1) 0 0; padding-left: 1.2rem; }
 .exp-list li { margin: 0.2rem 0; }
 .exp-list em { color: var(--muted); font-style: italic; }
-.card-actions { margin-top: var(--sp-4); display: flex; gap: var(--sp-3); }
+.card-actions { margin-top: var(--sp-4); display: flex; gap: var(--sp-3); flex-wrap: wrap; }
 
 /* results */
 .results {
