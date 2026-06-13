@@ -59,8 +59,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
       *(Browser visual/interaction check still recommended — JS untested headless.)*
 
 ## Phase 4 — Spaced repetition + review queue
-- [ ] (P0) Deterministic scheduler: ease/interval per question (Leitner or SM-2-lite).
-- [ ] (P0) Review queue surfacing previously-missed questions.
+- [x] (P0) Deterministic scheduler: ease/interval per question (Leitner). `app/engine/scheduler.py`
+      — Leitner boxes from `attempts` (one outcome/day), box→interval, due_date; idempotent.
+- [x] (P0) Review queue surfacing previously-missed questions. `quiz.build_review` +
+      `/quiz?mode=review` + `/api/quiz` review mode; dashboard "N due" button; immediate feedback.
 - [ ] Formula-sheet trainer using the **unlabelled** ISED aid sheet (exam-legal sheet).
 
 ## Phase 4.5 — Adaptive learning engine (§6d)  *(the per-section adaptivity Chris asked for)*

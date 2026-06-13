@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import date
 
 from app.engine.mastery import compute_section_mastery, HONOURS_BAR
+from app.engine import scheduler
 
 
 def day_streak(conn) -> int:
@@ -63,6 +64,7 @@ def dashboard_summary(conn, by_section: dict | None = None) -> dict:
         "mastered": mastered,
         "bank_size": bank_size,
         "mastered_pct": round(100.0 * mastered / bank_size, 1) if bank_size else 0.0,
+        "review_due": scheduler.review_due_count(conn),
         "honours_bar": HONOURS_BAR,
         "answered": answered,
     }
@@ -86,13 +88,14 @@ def suggest_session(conn, by_section: dict | None = None) -> dict:
 
     weakest = sorted(studied, key=lambda s: s["mastery_pct"] if s["mastery_pct"] is not None else 0.0)
     focus = weakest[0]
-    review = weakest[1] if len(weakest) > 1 else None
     tools = tools_for_section(focus["section"])
+    due = scheduler.review_due_count(conn)
 
     detail = f"15 new in {focus['short'].lower()}"
-    if review:
-        detail += f", 10 review from {review['short'].lower()}"
+    if due:
+        detail += f", {due} due for review"
     if tools:
         detail += f", then revisit the {tools[0]['name']} tool"
     detail += f". Weakest section right now: {focus['short'].lower()}."
-    return {"headline": "Today's session", "detail": detail, "focus_section": focus["section"]}
+    return {"headline": "Today's session", "detail": detail,
+            "focus_section": focus["section"], "review_due": due}

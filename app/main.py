@@ -31,7 +31,7 @@ app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 
 # --- request models ---
 class QuizRequest(BaseModel):
-    mode: str = Field(pattern="^(drill|exam)$")
+    mode: str = Field(pattern="^(drill|exam|review)$")
     section: int | None = Field(default=None, ge=1, le=8)
     count: int | None = Field(default=None, ge=1, le=200)
 
@@ -84,9 +84,9 @@ def section_page(request: Request, section: int):
 
 @app.get("/quiz", response_class=HTMLResponse)
 def quiz_page(request: Request, mode: str = "drill", section: int | None = None):
-    if mode not in ("drill", "exam"):
-        raise HTTPException(400, "mode must be 'drill' or 'exam'")
-    title = "Mock Exam" if mode == "exam" else f"Drill — Section {section}"
+    if mode not in ("drill", "exam", "review"):
+        raise HTTPException(400, "mode must be 'drill', 'exam', or 'review'")
+    title = {"exam": "Mock Exam", "review": "Review"}.get(mode, f"Drill — Section {section}")
     return templates.TemplateResponse(
         request,
         "quiz.html",
@@ -112,6 +112,10 @@ def api_quiz(req: QuizRequest):
     try:
         if req.mode == "exam":
             questions = quiz.build_mock_exam(conn)
+        elif req.mode == "review":
+            questions = quiz.build_review(conn, req.count or quiz.DEFAULT_REVIEW_SIZE)
+            if not questions:
+                raise HTTPException(404, "nothing is due for review right now")
         else:
             if req.section is None:
                 raise HTTPException(400, "drill requires a section")

@@ -49,11 +49,16 @@
     <span class="session-icon" aria-hidden="true">◎</span> {{ session.headline }}
   </div>
   <p class="session-detail">{{ session.detail }}</p>
-  {% if session.focus_section %}
-    <a class="btn btn-primary" href="/section/{{ session.focus_section }}">Start session ↗</a>
-  {% else %}
-    <a class="btn btn-primary" href="/quiz?mode=exam">Start a mock exam ↗</a>
-  {% endif %}
+  <div class="card-actions">
+    {% if session.focus_section %}
+      <a class="btn btn-primary" href="/section/{{ session.focus_section }}">Start session ↗</a>
+    {% else %}
+      <a class="btn btn-primary" href="/quiz?mode=exam">Start a mock exam ↗</a>
+    {% endif %}
+    {% if summary.review_due %}
+      <a class="btn" href="/quiz?mode=review">Review {{ summary.review_due }} due</a>
+    {% endif %}
+  </div>
 </section>
 
 <section class="mastery-list">

@@ -98,6 +98,18 @@ def main() -> None:
     assert summ["bank_size"] == 984
     assert 0 <= summ["mastered"] <= 984
     assert isinstance(summ["streak"], int)
+    assert "review_due" in summ
+
+    # spaced-repetition scheduler + review mode
+    from app.engine import scheduler
+    assert scheduler.compute_schedule(conn) == scheduler.compute_schedule(conn), "scheduler not deterministic"
+    # the wrong attempt recorded above is in box 1, due immediately
+    assert scheduler.review_due_count(conn) >= 1
+    rv = c.post("/api/quiz", json={"mode": "review"}).json()
+    print("review:", rv["count"], "due questions")
+    assert rv["count"] >= 1
+    assert all("correct_index" not in q for q in rv["questions"]), "ANSWER LEAKED (review)"
+    assert c.get("/quiz?mode=review").status_code == 200
 
     # pages render
     assert c.get("/quiz?mode=exam").status_code == 200

@@ -98,7 +98,8 @@ async function choose(chosen) {
   if (res.correct) correctCount++;
   results.push({ q, chosen, correct: res.correct, correct_index: res.correct_index });
 
-  if (MODE === "drill") {
+  if (MODE !== "exam") {
+    // drill and review give immediate feedback; exam defers to the results screen
     showFeedback(chosen, res);
   }
   el("next").classList.remove("hidden");

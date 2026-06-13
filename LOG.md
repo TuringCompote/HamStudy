@@ -228,6 +228,36 @@ theming from `tokens.css`, original lesson text, Learn → Interact → Drill.
 - **Phase 3 is done** (8 tools + original lessons + Learn→Interact→Drill). Next: Phase 4
   (deterministic spaced-repetition scheduler + review queue + formula-sheet trainer).
 
+---
+
+## 2026-06-13 — Phase 4 P0 (spaced repetition + review queue)
+
+**Done**
+- **Deterministic scheduler** (`app/engine/scheduler.py`): Leitner boxes computed
+  purely from `attempts`, collapsed to one review outcome per calendar day (so
+  same-session repeats can't inflate a box). correct ⇒ promote (cap box 6), wrong
+  ⇒ reset to box 1; box→interval {1:0,2:1,3:3,4:7,5:16,6:35} days; `due_date =
+  last_review + interval`. `due_reviews()` (most-overdue/weakest first) and
+  `review_due_count()`. "Today" only filters due-ness; box/interval/due are pure
+  over the log (constitution §5). Verified: promotion cap, lapse reset, same-day
+  collapse, due ordering, determinism.
+- **Review mode**: `quiz.build_review()` serves due questions (answer-stripped);
+  `/api/quiz` + `/quiz?mode=review`; recorded with `mode=review`; immediate
+  per-question feedback (like drill). Empty queue → friendly 404.
+- **Dashboard**: real `review_due` count; "Review N due" button in the session
+  card; `suggest_session` now cites the real review count.
+- Smoke test extended (scheduler determinism, review-due ≥1, review payload has no
+  answers, review page renders). All green. The user's dry-run attempts are now in
+  the real DB (review showed 11 due from real usage).
+
+**Decisions**
+- **Leitner over SM-2** for v1: fully deterministic, no ease-factor tuning, maps
+  cleanly to "missed → resurfaces soon." Can swap to SM-2-lite later if desired.
+- One-outcome-per-day collapse prevents drill-spam from over-promoting a question.
+
+**Next:** formula-sheet trainer (non-P0, using the unlabelled exam sheet), then
+Phase 4.5 (adaptive engine) / Phase 5 (close the loop + AI layer).
+
 **How to run**
 ```
 pip install -r requirements.txt

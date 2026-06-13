@@ -14,9 +14,11 @@ from __future__ import annotations
 import random
 
 from app.db import queries
+from app.engine import scheduler
 
 MOCK_EXAM_SIZE = 100
 DEFAULT_DRILL_SIZE = 20
+DEFAULT_REVIEW_SIZE = 20
 
 
 def allocate_proportional(sizes: dict[int, int], total: int) -> dict[int, int]:
@@ -43,6 +45,14 @@ def build_drill(conn, section: int, count: int = DEFAULT_DRILL_SIZE,
         return []
     chosen = rng.sample(pool, min(count, len(pool)))
     return queries.questions_for_ids(conn, chosen)
+
+
+def build_review(conn, count: int = DEFAULT_REVIEW_SIZE) -> list[dict]:
+    """Up to `count` questions that are due for spaced-repetition review, most
+    overdue / weakest first (order from the deterministic scheduler; no answers
+    in the payload)."""
+    due = scheduler.due_reviews(conn, limit=count)
+    return queries.questions_for_ids(conn, due)
 
 
 def build_mock_exam(conn, size: int = MOCK_EXAM_SIZE,
