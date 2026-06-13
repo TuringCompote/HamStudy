@@ -106,7 +106,7 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
   height: 1.4rem; background: var(--track); border: var(--border-w) solid var(--border);
   border-radius: var(--radius-sm); overflow: hidden; vertical-align: middle;
 }
-.smeter-fill { height: 100%; background: var(--accent); }
+.smeter-fill { display: block; height: 100%; background: var(--accent); }
 /* depth-tier colors (spec §6d.2) */
 .smeter-fill.tier-testout  { background: var(--tier-testout); }
 .smeter-fill.tier-light    { background: var(--tier-light); }
@@ -116,12 +116,13 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .smeter-fill.tier-ok   { background: var(--ok); }
 .smeter-fill.tier-warn { background: var(--warn); }
 .smeter-fill.tier-low  { background: var(--bad); }
-/* notches: thin gaps every 5% give the ~20-segment meter read */
+/* notches: fixed-width segments via px-only stops (robust on iOS Safari) */
 .smeter::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(
-    90deg, transparent 0, transparent calc(5% - 2px),
-    var(--bg) calc(5% - 2px), var(--bg) 5%);
+    90deg,
+    transparent 0, transparent 14px,
+    var(--bg) 14px, var(--bg) 16px);
 }
 .smeter-val { margin-left: var(--sp-2); font-size: 0.82rem; font-weight: 600; }
 .smeter-row { display: flex; align-items: center; }
