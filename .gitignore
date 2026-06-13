@@ -10,6 +10,8 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 data/*.sqlite
+data/recommendation.json
+data/journal/
 
 # Downloaded source material — do NOT redistribute (constitution §2/§3).
 # The ISED bank is a Gov-of-Canada work, but we keep binaries out of the repo;

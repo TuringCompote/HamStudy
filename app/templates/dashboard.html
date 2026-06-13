@@ -51,9 +51,9 @@
 
 <section class="session-card">
   <div class="session-head">
-    <span class="session-icon" aria-hidden="true">◎</span> {{ session.headline }}
+    <span class="session-icon" aria-hidden="true">◎</span> Today's session
   </div>
-  <p class="session-detail">{{ session.detail }}</p>
+  <p class="session-detail">{{ session.rationale }}</p>
   <div class="card-actions">
     {% if session.focus_section %}
       <a class="btn btn-primary" href="/section/{{ session.focus_section }}">Start session ↗</a>
@@ -76,7 +76,9 @@
       <span class="smeter-fill tier-{{ s.tier_css }}" style="width: {{ s.fresh_pct }}%"></span>
       {% endif %}
     </span>
-    <span class="mrow-pct mono">{{ s.fresh_pct if s.fresh_pct is not none else "—" }}{% if s.fresh_pct is not none %}%{% endif %}</span>
+    <span class="mrow-pct mono">{{ s.fresh_pct if s.fresh_pct is not none else "—" }}{% if s.fresh_pct is not none %}%{% endif %}
+      {% if s.trend == "improving" %}<span class="trend up" title="improving">▲</span>
+      {% elif s.trend == "regressing" %}<span class="trend down" title="regressing">▼</span>{% endif %}</span>
     <span class="mrow-tier tier-text-{{ s.tier_css }}">{{ s.tier if s.tier else "unrated" }}</span>
   </a>
   {% endfor %}

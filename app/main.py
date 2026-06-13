@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from app.db import queries
 from app.db.init_db import connect
-from app.engine import mastery, coach, diagnostic
+from app.engine import mastery, coach, diagnostic, recommend
 from app import quiz, config, tools, content, formulas
 
 BASE = Path(__file__).resolve().parent
@@ -57,13 +57,18 @@ def dashboard(request: Request):
         by_section = mastery.compute_section_mastery(conn)
         diagnostic.apply_diagnostic_tiers(conn, by_section)
         summary = coach.dashboard_summary(conn, by_section)
-        session = coach.suggest_session(conn, by_section)
+        rec = recommend.refresh(conn)  # build + persist recommendation.json, then read it back
+        # surface per-section trend on the rows
+        for s in by_section.values():
+            ps = rec["readiness"]["per_section"].get(s["section"], {})
+            s["trend"] = ps.get("trend", "new")
     finally:
         conn.close()
     return templates.TemplateResponse(
         request,
         "dashboard.html",
-        {"sections": by_section, "summary": summary, "session": session},
+        {"sections": by_section, "summary": summary,
+         "session": rec["next_session"], "rec": rec},
     )
 
 

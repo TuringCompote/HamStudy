@@ -85,9 +85,23 @@ def main() -> None:
     assert sum(alloc.values()) == 100, alloc
     assert alloc[1] >= alloc[8], alloc  # bigger section gets >= share
 
-    # dashboard renders the instrument-panel layout
+    # recommendation engine (deterministic) + AIProvider stub
+    from app.engine import recommend, analysis
+    assert analysis.section_trend(conn) == analysis.section_trend(conn), "trend not deterministic"
+    rec = recommend.build_recommendation(conn)
+    assert rec == recommend.build_recommendation(conn), "recommendation not deterministic"
+    assert "next_session" in rec and "readiness" in rec and "review_queue" in rec
+    from app.coaching.ai_provider import get_provider, StubProvider
+    prov = get_provider(force_stub=True)
+    assert isinstance(prov, StubProvider)
+    ex = prov.explain(question={"options": ["a", "b", "c", "d"], "correct_index": 2}, chosen_index=0)
+    assert ex.degraded and ex.cost_usd == 0.0 and "correct answer" in ex.text.lower()
+
+    # dashboard renders the instrument-panel layout (also refreshes recommendation.json)
     dash = c.get("/")
     assert dash.status_code == 200
+    assert config.RECOMMENDATION_PATH.exists(), "recommendation.json not written"
+    assert conn.execute("SELECT COUNT(*) c FROM recommendation").fetchone()["c"] >= 1
     for marker in ["readiness-val", "stat-cards", "session-card",
                    "Per-section mastery", "tier-text-deep", "app-badge"]:
         assert marker in dash.text, marker

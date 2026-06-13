@@ -85,6 +85,9 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .tier-text-standard { color: var(--tier-standard); }
 .tier-text-deep     { color: var(--tier-deep); }
 .tier-text-none     { color: var(--muted); }
+.trend { font-size: 0.7rem; }
+.trend.up { color: var(--ok); }
+.trend.down { color: var(--bad); }
 .tier-legend { display: flex; gap: var(--sp-4); margin-top: var(--sp-4); flex-wrap: wrap; }
 
 .section-table { width: 100%; border-collapse: collapse; }
