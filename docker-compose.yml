@@ -1,0 +1,21 @@
+# Elmer — one container in a single Proxmox LXC (spec §0.4 / §8).
+# LAN/VPN-only: reach it by the LXC's local-DNS hostname; no reverse proxy/Cloudflare.
+# Bind to the LXC LAN IP by setting BIND_IP in .env (defaults to all interfaces).
+services:
+  elmer:
+    build: .
+    container_name: elmer
+    env_file: .env            # ANTHROPIC_API_KEY (+ optional overrides) — never committed
+    ports:
+      - "${BIND_IP:-0.0.0.0}:${PORT:-8000}:8000"
+    volumes:
+      - ./data:/app/data      # SQLite (questions + the 984 explanations + attempts),
+                              # recommendation.json, journal/ — persist on the NAS-backed path
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/api/health').status==200 else sys.exit(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

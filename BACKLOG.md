@@ -115,13 +115,16 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] (P0) Readiness: ≥80% fresh-question accuracy in every section AND §6d.4 coverage ⇒
       "book the exam." `app/engine/readiness.py`.
 
-## Phase 6 — Package & deploy
-- [ ] (P0) Dockerfile + docker-compose.
-- [ ] (P0) Deploy as **one container in a single Proxmox LXC**. **No reverse proxy / no
-      Cloudflare** — bind to the LXC LAN IP:port, reach by **local DNS hostname**, remote
-      via **home VPN**. LAN/VPN-only.
-- [ ] (P0) SQLite backup to NAS.
-- [ ] `README.md`: run / update / deploy steps. Journal export to Obsidian (path TBD).
+## Phase 6 — Package & deploy  *(build artifacts DONE 2026-06-13; actual LXC deploy = Chris's step)*
+- [x] (P0) Dockerfile + docker-compose. Single container (uvicorn), `data/` volume mount,
+      env_file `.env`, healthcheck on `/api/health`, `.dockerignore` keeps data/secrets/refs out.
+      *(Not build-tested here — no Docker on the dev box; builds on the LXC.)*
+- [x] (P0) Deploy config: **one container, LXC LAN IP:port via `BIND_IP`/`PORT`, local-DNS
+      hostname, home VPN, no reverse proxy/Cloudflare.** (Run `docker compose up -d` on the LXC.)
+- [x] (P0) SQLite backup to NAS: `app/db/backup.py` (online WAL-safe snapshot + prune) + cron
+      example in README.
+- [x] `README.md`: run / update / **deploy** steps + bank-update path; journal → point Obsidian
+      at `data/journal/`. ⚠️ documented: preserve `data/hamstudy.db` (has the paid batch).
 - [ ] Optional: thin read-only Cowork deep-dive skill (`ham-coach-skill/SKILL.md`).
 
 ## Phase 7 — Advanced Qualification (later)

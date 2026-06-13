@@ -1,0 +1,17 @@
+# Keep the image lean + never bake in data/secrets/refs.
+.git
+.gitignore
+.claude
+.env
+data
+references
+evals
+tests
+docs
+*.md
+example dashboard.png
+__pycache__
+**/__pycache__
+*.pyc
+.venv
+venv

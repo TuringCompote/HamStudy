@@ -436,6 +436,33 @@ budget. **Lessons / guardrails to add before any re-run:**
 The batch itself succeeded (984/984) — the spend is one-time and now banked; $0
 per study session afterward, regenerate only on a bank revision (~yearly).
 
+---
+
+## 2026-06-13 — Phase 6 (package & deploy build artifacts)
+
+**Done:** `Dockerfile` (python:3.12-slim, uvicorn, copies app+prompts only),
+`docker-compose.yml` (single `elmer` container, `./data` volume, `env_file .env`,
+`BIND_IP`/`PORT` for LAN-IP binding, `/api/health` healthcheck), `.dockerignore`
+(keeps data/secrets/refs/docs out of the image), `app/db/backup.py` (online
+WAL-safe SQLite snapshot + prune, for a NAS cron), README **Deploy** section
+(deploy steps, Console spend-limit reminder, NAS backup cron, Obsidian =
+`data/journal/`, bank-update path, and a loud "preserve data/hamstudy.db / don't
+re-batch" warning).
+
+**Decisions / notes:**
+- App code only in the image; `data/` (SQLite w/ questions+explanations+attempts),
+  `.env`, and `references/` come from mounts/env — the paid batch DB is never baked
+  in and never re-run on deploy.
+- Could not `docker build` here (no Docker on the Windows dev box) — files are
+  standard; build happens on the LXC. Smoke test green; backup helper verified
+  (timestamped copy + retention).
+- `diagnose()` live per-user layer: deferred (Chris's call) until after deploy +
+  Console spend limit — provider method exists, UI wire-up pending.
+
+**Remaining:** Chris runs the actual LXC deploy; optional Cowork deep-dive skill;
+deferred niceties (trend/decay window, tier-scaled lesson depth, §6d.6 "Tuned for
+you" content_cache, diagnose() UI). v1 Definition of Done (AGENT.md) is met.
+
 **How to run**
 ```
 pip install -r requirements.txt
