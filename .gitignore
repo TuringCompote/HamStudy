@@ -21,6 +21,7 @@ references/*.zip
 references/*.PDF
 references/*.html
 references/_extracted/
+references/_corpus/
 
 # Python
 __pycache__/

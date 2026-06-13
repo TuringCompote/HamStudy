@@ -21,7 +21,7 @@ from app.db.init_db import connect
 from app.engine import mastery, coach, diagnostic, recommend
 from app import quiz, config, tools, content, formulas
 from app.coaching.ai_provider import get_provider
-from app.coaching import journal as journal_mod, usage as usage_mod
+from app.coaching import journal as journal_mod, usage as usage_mod, corpus as corpus_mod
 
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
@@ -207,7 +207,10 @@ def api_explain(req: ExplainRequest):
             raise HTTPException(404, "unknown question id")
     finally:
         conn.close()
-    result = get_provider().explain(question=q, chosen_index=req.chosen_index)
+    grounding = corpus_mod.ground_for_section(q["section"])  # RIC/RBR for regs sections
+    result = get_provider().explain(
+        question=q, chosen_index=req.chosen_index, grounding=grounding
+    )
     return {"text": result.text, "degraded": result.degraded,
             "model": result.model, "cost_usd": round(result.cost_usd, 6)}
 

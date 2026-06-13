@@ -46,6 +46,19 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 AI_MODEL = os.environ.get("HAMSTUDY_AI_MODEL", "claude-opus-4-8")
 AI_MODEL_CHEAP = os.environ.get("HAMSTUDY_AI_MODEL_CHEAP", "claude-haiku-4-5")
 AI_MONTHLY_BUDGET_USD = float(os.environ.get("HAMSTUDY_AI_BUDGET", "15"))
+
+# Per-call-type model routing (configurable). Reasoning + content grounded in the
+# reference docs stays on Opus for quality (explain/diagnose/condense); plain-language
+# phrasing (narrate) routes to the cheaper model. Override per type via env.
+AI_MODELS = {
+    "explain": os.environ.get("HAMSTUDY_MODEL_EXPLAIN", AI_MODEL),
+    "diagnose": os.environ.get("HAMSTUDY_MODEL_DIAGNOSE", AI_MODEL),
+    "condense": os.environ.get("HAMSTUDY_MODEL_CONDENSE", AI_MODEL),
+    "narrate": os.environ.get("HAMSTUDY_MODEL_NARRATE", AI_MODEL_CHEAP),
+}
+
+# Externalized, Console-tunable prompts (prompts/<call_type>.md).
+PROMPTS_DIR = Path(os.environ.get("HAMSTUDY_PROMPTS", ROOT / "prompts"))
 # "anthropic" when a key is present, else "stub" (deterministic, offline).
 AI_PROVIDER = os.environ.get(
     "HAMSTUDY_AI_PROVIDER", "anthropic" if ANTHROPIC_API_KEY else "stub"

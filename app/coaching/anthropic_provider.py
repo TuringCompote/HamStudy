@@ -21,17 +21,8 @@ import anthropic
 
 from app import config
 from app.db.init_db import connect
-from app.coaching import usage
+from app.coaching import usage, prompts
 from app.coaching.ai_provider import AIProvider, AIResult, StubProvider
-
-_SYSTEM = (
-    "You are Elmer, a coach for the Canadian Basic amateur-radio exam, helping a "
-    "learner who is strong in electronics. Be concise and technical; go deep on the "
-    "*why* and skip the obvious. Write ORIGINAL explanations in your own words — never "
-    "reproduce text from any source document; if reference material is provided, use it "
-    "to stay accurate and cite it briefly, but do not copy its prose. Plain text, no "
-    "preamble."
-)
 
 
 class AnthropicProvider(AIProvider):
@@ -41,14 +32,15 @@ class AnthropicProvider(AIProvider):
         if not config.ANTHROPIC_API_KEY:
             raise RuntimeError("ANTHROPIC_API_KEY not set")
         self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        self.model = config.AI_MODEL
         self._stub = StubProvider()
+
+    def _model_for(self, call_type: str) -> str:
+        return config.AI_MODELS.get(call_type, config.AI_MODEL)
 
     # --- core call with budget guard + usage logging + graceful fallback ---
     def _call(self, *, user: str, call_type: str, grounding: str = "",
-              max_tokens: int = 700, model: str | None = None,
-              stub_result: AIResult) -> AIResult:
-        model = model or self.model
+              max_tokens: int = 700, stub_result: AIResult) -> AIResult:
+        model = self._model_for(call_type)
         conn = connect()
         try:
             ok, _mtd = usage.within_budget(conn)
@@ -57,7 +49,7 @@ class AnthropicProvider(AIProvider):
                 r.degraded = True
                 return r
 
-            system = [{"type": "text", "text": _SYSTEM}]
+            system = [{"type": "text", "text": prompts.system_prompt(call_type)}]
             if grounding:
                 # prompt-cache the (stable) reference material
                 system.append({
