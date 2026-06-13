@@ -114,10 +114,32 @@ function showFeedback(chosen, res) {
   opts[res.correct_index].classList.add("correct");
   if (!res.correct) opts[chosen].classList.add("wrong");
   const fb = el("feedback");
+  fb.className = "feedback " + (res.correct ? "good" : "bad");
   fb.textContent = res.correct
     ? "Correct."
     : `Not quite — the answer is ${OPTION_LETTERS[res.correct_index]}.`;
-  fb.className = "feedback " + (res.correct ? "good" : "bad");
+  // on-demand AI explanation
+  const q = questions[idx];
+  const explainBtn = document.createElement("button");
+  explainBtn.className = "btn explain-btn";
+  explainBtn.textContent = "Explain ▾";
+  const out = document.createElement("div");
+  out.className = "explain-out muted small hidden";
+  explainBtn.onclick = async () => {
+    explainBtn.disabled = true;
+    explainBtn.textContent = "Explaining…";
+    try {
+      const r = await api("/api/explain", { question_id: q.id, chosen_index: chosen });
+      out.textContent = r.text + (r.degraded ? "  (AI off — set an API key for a tailored explanation)" : "");
+    } catch (e) {
+      out.textContent = "Could not get an explanation: " + e.message;
+    }
+    out.classList.remove("hidden");
+    explainBtn.classList.add("hidden");
+  };
+  fb.appendChild(document.createElement("br"));
+  fb.appendChild(explainBtn);
+  fb.appendChild(out);
 }
 
 el("next").onclick = () => {

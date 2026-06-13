@@ -20,6 +20,8 @@ from app.db import queries
 from app.db.init_db import connect
 from app.engine import mastery, coach, diagnostic, recommend
 from app import quiz, config, tools, content, formulas
+from app.coaching.ai_provider import get_provider
+from app.coaching import journal as journal_mod, usage as usage_mod
 
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
@@ -47,6 +49,11 @@ class DiagnosticRequest(BaseModel):
     section: int = Field(ge=1, le=8)
     served_ids: list[str] = Field(min_length=1, max_length=20)
     confidence_prior: str | None = None
+
+
+class ExplainRequest(BaseModel):
+    question_id: str
+    chosen_index: int = Field(ge=0, le=3)
 
 
 # --- pages ---
@@ -187,6 +194,42 @@ def api_attempt(req: AttemptRequest):
         raise HTTPException(404, str(e))
     finally:
         conn.close()
+
+
+@app.post("/api/explain")
+def api_explain(req: ExplainRequest):
+    """On-demand AI explanation of a question/miss (falls back to a stub when the
+    AI budget is reached or no key is set). Grounding corpus arrives in Phase 5.3."""
+    conn = connect()
+    try:
+        q = queries.get_question(conn, req.question_id, with_answer=True)
+        if q is None:
+            raise HTTPException(404, "unknown question id")
+    finally:
+        conn.close()
+    result = get_provider().explain(question=q, chosen_index=req.chosen_index)
+    return {"text": result.text, "degraded": result.degraded,
+            "model": result.model, "cost_usd": round(result.cost_usd, 6)}
+
+
+@app.post("/api/journal")
+def api_journal():
+    conn = connect()
+    try:
+        return journal_mod.write_journal(conn)
+    finally:
+        conn.close()
+
+
+@app.get("/api/ai-status")
+def api_ai_status():
+    conn = connect()
+    try:
+        ok, mtd = usage_mod.within_budget(conn)
+    finally:
+        conn.close()
+    return {"provider": config.AI_PROVIDER, "within_budget": ok,
+            "month_to_date_usd": round(mtd, 4), "ceiling_usd": config.AI_MONTHLY_BUDGET_USD}
 
 
 @app.get("/api/health")

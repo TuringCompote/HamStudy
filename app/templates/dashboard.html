@@ -95,6 +95,17 @@
   <a class="btn" href="/quiz?mode=exam">100-question mock exam</a>
   {% if summary.review_due %}<a class="btn" href="/quiz?mode=review">Review ({{ summary.review_due }} due)</a>{% endif %}
   <a class="btn" href="/formula-trainer">Formula-sheet trainer</a>
+  <button class="btn" type="button" onclick="writeJournal(this)">Write today's journal</button>
 </section>
+<script>
+async function writeJournal(btn){
+  btn.disabled=true; const t=btn.textContent; btn.textContent="Writing…";
+  try{
+    const r=await fetch("/api/journal",{method:"POST"});
+    const j=await r.json();
+    btn.textContent = "Journal saved" + (j.degraded?" (AI off)":"");
+  }catch(e){ btn.textContent="Journal failed"; btn.disabled=false; }
+}
+</script>
 
 {% endblock %}

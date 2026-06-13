@@ -323,6 +323,39 @@ pushed).
 Anthropic layer, budget guard, journal, and the §6d.6 curated-corpus content
 adaptation; plus the deferred trend/decay + tier-scaled lesson depth/spacing.
 
+---
+
+## 2026-06-13 — Phase 5 (1/3 + 2/3): loop + AI layer + budget guard
+
+**1/3 — deterministic loop close** (committed): `analysis.py` (trend, fresh-vs-
+review, most-missed, fast/slow-wrong), `recommend.py` (`recommendation.json` +
+history table, dedup by content hash), dashboard reads it; `AIProvider` interface
++ `StubProvider`.
+
+**2/3 — Anthropic AI layer + budget guard** (this step):
+- `app/coaching/anthropic_provider.py`: real Claude impl behind `AIProvider`
+  (explain/diagnose/narrate/condense). Key from `ANTHROPIC_API_KEY` (.env,
+  gitignored) — never hardcoded. **Graceful fallback to the stub** on no-key,
+  over-budget, or any API error (the loop never breaks). Opus 4.8 surface
+  (no temperature/budget_tokens); grounding passed as a `cache_control` system
+  block (corpus wiring lands in 3/3).
+- `app/coaching/usage.py`: `usage` table logging (tokens + est cost) + monthly
+  budget guard. Pricing per claude-api ref: Opus $5/$25, Haiku $1/$5 per MTok;
+  cache read 0.1×, write 1.25×. `within_budget()` checks month-to-date vs the
+  configurable ceiling (default $15, `HAMSTUDY_AI_BUDGET`).
+- `/api/explain` (on-demand miss explanation + "Explain ▾" button in drill/review),
+  `/api/journal` (AI-narrated `data/journal/YYYY-MM-DD.md` + index), `/api/ai-status`.
+  `app/coaching/journal.py`.
+- config loads `.env`; `AI_PROVIDER` auto = anthropic when a key is present, else
+  stub; `AI_MODEL` / `AI_MODEL_CHEAP` configurable.
+- Smoke test exercises the AI layer **stub-forced (no spend)**: explain/journal
+  degrade cleanly, cost math ($5+$25=$30/MTok), budget guard, ai-status. All green.
+
+**Not yet verified:** a real (paid) Anthropic call — held pending your OK (spends
+a fraction of a cent). **Remaining for 3/3:** per-call-type model routing
+(Opus explain/diagnose, optional Haiku narrate), externalized prompt files, RIC
+prompt-cache corpus, evals/. (Status + plan posted; awaiting OK.)
+
 **How to run**
 ```
 pip install -r requirements.txt

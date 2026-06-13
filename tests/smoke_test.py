@@ -24,6 +24,7 @@ _tmp = os.path.join(tempfile.gettempdir(), "hamstudy_smoke.db")
 shutil.copy(_src, _tmp)
 os.environ["HAMSTUDY_DB"] = _tmp
 config.DB_PATH = config.Path(_tmp)  # override the already-imported value
+config.AI_PROVIDER = "stub"         # never spend real money during tests
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -156,6 +157,21 @@ def main() -> None:
     from app.engine import diagnostic as diagmod
     assert diagmod.has_diagnostic(conn, 7)
     assert c.get("/quiz?mode=diagnostic&section=7&confidence=rusty").status_code == 200
+
+    # AI layer (stub-forced — no spend), budget guard, journal
+    from app.coaching.ai_provider import get_provider, StubProvider
+    from app.coaching import usage as usagemod
+    assert isinstance(get_provider(), StubProvider)
+    ex = c.post("/api/explain", json={"question_id": served[0], "chosen_index": 0}).json()
+    assert ex["degraded"] is True and ex["text"] and ex["cost_usd"] == 0
+    assert usagemod.estimate_cost("claude-opus-4-8", 1_000_000, 1_000_000) == 30.0  # $5 + $25
+    ok, mtd = usagemod.within_budget(conn)
+    assert ok and mtd == 0.0
+    st = c.get("/api/ai-status").json()
+    assert "within_budget" in st and st["provider"] == "stub"
+    jr = c.post("/api/journal").json()
+    assert jr["degraded"] is True
+    assert Path(jr["path"]).exists()
 
     # formula-sheet trainer
     ft = c.get("/formula-trainer")
