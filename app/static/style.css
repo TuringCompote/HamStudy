@@ -248,9 +248,16 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .jr-day.today { outline: 2px solid var(--accent); outline-offset: -1px; }
 .jr-day:disabled { opacity: 0.55; }
 .jr-range { margin-top: var(--sp-2); }
-.jr-entry { margin-top: var(--sp-4); }
-.jr-entry.on { background: var(--surface); border: var(--border-w) solid var(--border);
+.jr-entry { display: none; }                 /* hidden until a day is clicked */
+.jr-entry.on { display: block; position: relative; margin-top: var(--sp-4);
+  background: var(--surface); border: var(--border-w) solid var(--border);
   border-radius: var(--radius); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow); }
+.jr-close { position: absolute; top: var(--sp-2); right: var(--sp-2);
+  width: 1.8rem; height: 1.8rem; line-height: 1; font-size: 1.2rem; padding: 0;
+  border: var(--border-w) solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--muted); cursor: pointer; }
+.jr-close:hover { border-color: var(--accent); color: var(--ink); }
+.jr-body { padding-right: 1.6rem; }
 .jr-entry h1 { font-size: 1.2rem; }
 .jr-entry h1:first-child { margin-top: 0; }
 

@@ -26,16 +26,26 @@ async function loadDates() {
   }
 }
 
+function closeEntry() {
+  const out = el("jr-entry");
+  out.innerHTML = "";
+  out.classList.remove("on");
+}
+
 async function loadEntry(di) {
   const out = el("jr-entry");
-  out.innerHTML = "Loading…";
   out.classList.add("on");
+  out.innerHTML =
+    '<button class="jr-close" type="button" id="jr-close" aria-label="close">×</button>' +
+    '<div class="jr-body">Loading…</div>';
+  el("jr-close").onclick = closeEntry;
+  const body = out.querySelector(".jr-body");
   try {
     const r = await fetch("/api/journal/entry/" + di);
-    if (!r.ok) { out.innerHTML = "<p class='muted'>No entry for that day.</p>"; return; }
-    out.innerHTML = (await r.json()).html;
+    if (!r.ok) { body.innerHTML = "<p class='muted'>No entry for that day.</p>"; return; }
+    body.innerHTML = (await r.json()).html;
   } catch (e) {
-    out.innerHTML = "<p class='muted'>Couldn't load that entry.</p>";
+    body.innerHTML = "<p class='muted'>Couldn't load that entry.</p>";
   }
 }
 
@@ -90,8 +100,6 @@ if (el("jr-days")) {
 
   (async () => {
     await loadDates();
-    render();
-    const td = iso(new Date());
-    if (entryDates.has(td)) loadEntry(td);   // auto-open today if present
+    render();   // entry stays closed until a day is clicked
   })();
 }
