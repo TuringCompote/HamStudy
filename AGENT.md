@@ -4,6 +4,13 @@
 > instructions. It is the same content either way — this project is tool-portable.
 
 ## What this project is
+**App name: `Elmer`** (store as a single `APP_NAME` config constant + page `<title>`; never
+hardcode it — keep it one-line changeable). **Visual direction: "instrument panel"** — calm
+neutral base (light+dark), one phosphor accent (teal/amber), mono font for numbers/IDs/
+formula values, clean sans for body, per-section mastery as a segmented S-meter colored by
+adaptive tier. Define all design tokens once in `tokens.css`; every SVG concept tool themes
+from those variables. Lightweight CSS only — no heavy framework.
+
 A single-user, self-hosted training system to get the user (Chris, Alberta) through the
 **ISED Basic Amateur Radio Qualification, targeting Basic with Honours (80%)**. Two parts
 that share one SQLite store: an **interactive web app** (the learning surface) and a
