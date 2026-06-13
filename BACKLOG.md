@@ -15,19 +15,22 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] (P0) Confirm `B-AAA-BBB-CCC` ID + answer-in-brackets format from the official page.
 - [x] (P0) Decide parser approach: official PDF = ground truth; adapt `canadian-ham-exam`
       (v1.0.1, 2025-02-26, UTF-8); cross-check count vs 984 + HamStudy CA_B_2025.
-- [ ] (P0, do at build start) Actually download the 2025-07-15 PDF + the Reference Material
-      ZIP (labelled + **unlabelled** sheets) into `references/`. *(Binary download — do in
-      Claude Code, not the Cowork fetch sandbox.)* **English-only — skip the `_fr` files.**
+- [~] (P0, do at build start) Download the bank PDF + Reference Material ZIP into
+      `references/`. **Bank PDF: done** (`amateur_basic_questions_en.pdf`, via the
+      lowercase apc-cap data-file URL). **ZIP still pending** — the dated `documents/...`
+      URL 404s; needs a refreshed URL (non-blocking; feeds Phase 4). **English-only.**
 - [ ] Download RIC-3, RBR-4, RIC-1 into `references/` for the AI explanation layer
-      (prompt-cache these at runtime).
+      (prompt-cache these at runtime). *(URLs to resolve; tracked in `fetch_sources.py`.)*
 
-## Phase 1 — Data foundation  *(switch to Claude Code from here)*
-- [ ] (P0) Build the ingest script: official bank → `questions` table (with `bank_version`).
-- [ ] (P0) Stand up the SQLite schema (spec §7): `questions`, `attempts`, `progress`,
-      `recommendation`, `journal`.
-- [ ] (P0) Validate: question count per section, no missing correct answers, every ID
-      parses to a valid section 1–8.
-- [ ] Idempotent re-ingest: upsert by `id`, bump `bank_version`, **never drop `attempts`**.
+## Phase 1 — Data foundation  *(done 2026-06-13 → see `LOG.md`)*
+- [x] (P0) Build the ingest script: official bank → `questions` table (with `bank_version`).
+      `app/db/ingest.py` — two-column-aware parser, 984/984 questions.
+- [x] (P0) Stand up the SQLite schema (spec §7): `questions`, `attempts`, `progress`,
+      `recommendation`, `journal` (+ `diagnostics`, `usage`, `meta`). `app/db/schema.sql`.
+- [x] (P0) Validate: count==984, per-section counts, no missing correct answers, every ID
+      parses to a valid section 1–8. `app/db/validate.py` — all checks pass.
+- [x] Idempotent re-ingest: upsert by `id`, derive `bank_version` from the PDF title page,
+      **never drop `attempts`** (verified with a probe attempt).
 
 ## Phase 2 — Quiz engine (MVP)
 - [ ] (P0) Per-section drilling.
