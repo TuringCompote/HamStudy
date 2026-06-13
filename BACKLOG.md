@@ -43,15 +43,15 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] Deterministic engine v1: per-section mastery % + coverage. `app/engine/mastery.py` (idempotent).
 - [x] Minimal dashboard. Per-section mastery bars + coverage + drill/exam entry points.
 
-## Phase 3 — Interactive learning layer  *(the differentiator — prioritize)*
+## Phase 3 — Interactive learning layer  *(DONE 2026-06-13 — all 8 tools + lessons + flow)*
 - [x] (P0) Ohm's Law / power triangle solver. `static/tools/ohms.js` (any 2 of V/I/R/P → other 2 + formula + circuit SVG).
 - [x] (P0) Reactance & resonance playground (L, C, f; X_L, X_C, f_resonant + log-log plot). `reactance.js`.
 - [x] (P0) Decibel converter (ratio ↔ dB, power/voltage toggle, 6 dB/S-unit examples). `decibel.js`.
 - [x] (P0) SWR / impedance matching visualizer (R+jX & Z₀ → Γ, SWR, reflected %, return loss, bar). `swr.js`.
 - [x] (P0) Wavelength ↔ frequency tool (½λ dipole, ¼λ vertical, velocity factor). `wavelength.js`.
-- [ ] Series/parallel resistance & capacitance calculator with live schematic.
-- [ ] Band-plan explorer (Canadian bands, privileges by qualification, primary/secondary).
-- [ ] Propagation visual (ionospheric layers vs day/night, sky/ground/LOS, MUF).
+- [x] Series/parallel resistance & capacitance calculator with live schematic. `seriesparallel.js` (§4).
+- [x] Band-plan explorer (Canadian bands, privileges by qualification, primary/secondary). `bandplan.js` (§1).
+- [x] Propagation visual (ionospheric layers vs day/night, sky/ground/LOS, MUF). `propagation.js` (§7).
 - [x] (P0) Write **original** short lesson text per section (no copied course prose).
       `app/content/sections/section{1..8}.md` — all 8 written, rendered via `app/content`.
 - [x] (P0) Wire the "Learn → Interact → Drill" flow per section. `GET /section/{n}` +

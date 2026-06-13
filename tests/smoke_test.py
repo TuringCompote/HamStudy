@@ -114,7 +114,7 @@ def main() -> None:
 
     # tool assets + lesson content served
     assert c.get("/static/tokens.css").status_code == 200
-    for f in ["registry", "ohms", "reactance", "decibel", "swr", "wavelength"]:
+    for f in ["registry", "ohms", "reactance", "decibel", "swr", "wavelength", "seriesparallel", "bandplan", "propagation"]:
         assert c.get(f"/static/tools/{f}.js").status_code == 200, f
 
     # lesson text exists for every section (original content)

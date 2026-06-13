@@ -56,10 +56,11 @@ TOOLS: dict[str, dict] = {
 
 # section number -> ordered list of tool ids shown on that section's page.
 SECTION_TOOLS: dict[int, list[str]] = {
+    1: ["bandplan"],                         # Regulations (privileges by qualification)
     4: ["seriesparallel"],                   # Circuit Components
     5: ["ohms", "reactance", "decibel"],     # Basic Electronics & Theory
     6: ["swr", "wavelength"],                # Feedlines & Antenna Systems
-    # 1: ["bandplan"], 7: ["propagation"]  — tools written but not yet wired (pending)
+    7: ["propagation"],                      # Radio Wave Propagation
 }
 
 

@@ -214,11 +214,19 @@ theming from `tokens.css`, original lesson text, Learn → Interact → Drill.
 - **AI source = curated LOCAL corpus, not live scraping** (reliable, cheap, local,
   copyright-safe). Original-text-only rule preserved.
 
+**Phase 3 completed (same session)**
+- Built the last two tools: **band-plan explorer** (`bandplan.js`, §1 — qualification
+  toggle showing which Canadian bands Basic vs Basic-with-Honours unlocks; the
+  >30 MHz rule, ranges, primary/secondary) and **propagation visual**
+  (`propagation.js`, §7 — day/night + frequency slider; sky-wave ray refracts below
+  the MUF, penetrates above, D-layer absorbs low HF by day). Wired §1 and §7.
+- **All 8 concept tools** now built; smoke test covers all 9 tool scripts. node --check
+  clean. Band-plan freq edges noted as "verify against RBR-4."
+
 **Open / next step**
-- Finish Phase 3 non-P0 tools: **band-plan explorer (§1)** and **propagation
-  visual (§7)** are written but un-wired pending build — wire + test next.
-- Browser eyeball of the dashboard + tools still recommended (no headless JS run).
-- Then Phase 4 (spaced repetition + review queue).
+- Browser eyeball of the dashboard + tools still recommended (no headless JS run here).
+- **Phase 3 is done** (8 tools + original lessons + Learn→Interact→Drill). Next: Phase 4
+  (deterministic spaced-repetition scheduler + review queue + formula-sheet trainer).
 
 **How to run**
 ```
