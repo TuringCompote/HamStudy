@@ -6,3 +6,4 @@ jinja2>=3.1
 pdfplumber>=0.11      # PDF parsing for the ISED question-bank ingest
 anthropic>=0.40       # AI layer (Phase 5); behind the AIProvider interface
 python-dotenv>=1.0    # load .env for local dev (API key, DB path) — never commit .env
+httpx>=0.27           # FastAPI TestClient (tests/smoke_test.py)

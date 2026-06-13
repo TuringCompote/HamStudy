@@ -13,8 +13,11 @@ repetition, adaptive difficulty, readiness; idempotent, no LLM) and an **AI laye
 - **Phase 0** (research/ground-truthing) — done (`PHASE0-FINDINGS.md`).
 - **Phase 1** (data foundation) — done: ingest + SQLite schema, **984/984**
   questions validated.
-- **Phase 2+** — quiz engine, interactive tools, spaced repetition, the loop,
-  deploy. See `BACKLOG.md`.
+- **Phase 2** (quiz engine MVP) — done: per-section drill + 100-Q proportional
+  mock (70%/80% lines), `attempts` recording, deterministic per-section mastery,
+  dashboard.
+- **Phase 3+** — interactive tools, spaced repetition, the loop, deploy. See
+  `BACKLOG.md`.
 
 ## Stack
 FastAPI (Python) + SQLite + vanilla JS/SVG, shipped as a single container.
@@ -49,6 +52,16 @@ python -m app.db.validate    # exits non-zero if anything is off
 
 Override locations via env: `HAMSTUDY_DB`, `HAMSTUDY_BANK_PDF`,
 `HAMSTUDY_REFERENCES`.
+
+## Run the app (Phase 2)
+```bash
+uvicorn app.main:app --reload          # http://127.0.0.1:8000
+python tests/smoke_test.py             # end-to-end API check (uses a throwaway DB copy)
+```
+Dashboard `/` shows per-section mastery + coverage and links to drills and the
+100-question mock exam. Per-question grading happens server-side; every answer is
+appended to `attempts`. Correct answers are never sent to the browser in the quiz
+payload — only on submit.
 
 ## Key invariants (see `constitution.md`)
 - The official ISED bank is the single source of truth; always record

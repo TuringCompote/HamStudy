@@ -34,13 +34,14 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] Idempotent re-ingest: upsert by `id`, derive `bank_version` from the PDF title page,
       **never drop `attempts`** (verified with a probe attempt).
 
-## Phase 2 — Quiz engine (MVP)
-- [ ] (P0) Per-section drilling.
-- [ ] (P0) Full 100-question mock exam: proportional sampling across subsections, 70% line
-      shown, **80% Honours line also shown**, optional timer.
-- [ ] (P0) Record every answer to `attempts` (id, section, sub, chosen, correct, ms, mode, ts).
-- [ ] Deterministic engine v1: per-section mastery %.
-- [ ] Minimal dashboard.
+## Phase 2 — Quiz engine (MVP)  *(done 2026-06-13 → see `LOG.md`)*
+- [x] (P0) Per-section drilling. `build_drill` + `/quiz?mode=drill&section=N` (immediate feedback).
+- [x] (P0) Full 100-question mock exam: section-proportional sampling (largest-remainder),
+      spread across subsections, **70% pass + 80% Honours lines shown**, timer. `build_mock_exam`.
+- [x] (P0) Record every answer to `attempts` (server-graded; id, section, sub, chosen, correct,
+      ms, mode, ts). Answers never shipped to the client in the quiz payload.
+- [x] Deterministic engine v1: per-section mastery % + coverage. `app/engine/mastery.py` (idempotent).
+- [x] Minimal dashboard. Per-section mastery bars + coverage + drill/exam entry points.
 
 ## Phase 3 — Interactive learning layer  *(the differentiator — prioritize)*
 - [ ] (P0) Ohm's Law / power triangle solver.

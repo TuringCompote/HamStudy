@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — HamStudy{% endblock %}
+{% block content %}
+
+<div id="quiz"
+     data-mode="{{ mode }}"
+     {% if section %}data-section="{{ section }}"{% endif %}>
+
+  <div class="quiz-head">
+    <h1 id="quiz-title">{{ title }}{% if section_name %} <small>{{ section_name }}</small>{% endif %}</h1>
+    <div class="quiz-meta">
+      <span id="progress"></span>
+      <span id="timer" class="timer"></span>
+    </div>
+  </div>
+
+  <div id="loading">Loading questions…</div>
+
+  <div id="card" class="card hidden">
+    <p id="stem" class="stem"></p>
+    <ul id="options" class="options"></ul>
+    <div id="feedback" class="feedback hidden"></div>
+    <div class="card-actions">
+      <button id="next" class="btn btn-primary hidden">Next</button>
+    </div>
+  </div>
+
+  <div id="results" class="results hidden"></div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/quiz.js"></script>
+{% endblock %}

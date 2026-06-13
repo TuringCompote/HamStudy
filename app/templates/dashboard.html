@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — HamStudy{% endblock %}
+{% block content %}
+
+<section class="summary">
+  <h1>Dashboard</h1>
+  {% if summary.overall_pct is not none %}
+    <p class="big">
+      Overall: <strong>{{ summary.overall_pct }}%</strong>
+      over {{ summary.answered }} answers
+      &middot; {{ summary.sections_meeting_honours }}/8 sections at Honours (≥80%)
+    </p>
+  {% else %}
+    <p class="big muted">No attempts yet — start a drill or a mock exam below.</p>
+  {% endif %}
+  <a class="btn btn-primary" href="/quiz?mode=exam">Start 100-question mock exam</a>
+</section>
+
+<section class="sections">
+  <h2>Sections</h2>
+  <table class="section-table">
+    <thead>
+      <tr><th>#</th><th>Section</th><th>Mastery</th><th>Coverage</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for s in sections.values() %}
+      <tr>
+        <td class="num">{{ s.section }}</td>
+        <td>{{ s.name }}</td>
+        <td class="bar-cell">
+          {% if s.mastery_pct is not none %}
+            <div class="bar" title="{{ s.correct }}/{{ s.answered }} correct">
+              <div class="bar-fill {{ 'ok' if s.meets_honours else 'warn' }}"
+                   style="width: {{ s.mastery_pct }}%"></div>
+              <span class="bar-label">{{ s.mastery_pct }}%</span>
+            </div>
+          {% else %}
+            <span class="muted">—</span>
+          {% endif %}
+        </td>
+        <td class="cov">{{ s.seen }}/{{ s.size }} ({{ s.coverage_pct }}%)</td>
+        <td><a class="btn" href="/quiz?mode=drill&section={{ s.section }}">Drill</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">
+    70% passes; 80% is the Honours bar this system targets across all 8 sections.
+  </p>
+</section>
+
+{% endblock %}

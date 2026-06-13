@@ -64,9 +64,49 @@ decisions, next step.
 - Note: a 2025-07-15-dated bank copy also exists on ised-isde, while the apc-cap
   data file is the 2025-08-26 re-issue — same 984 pool. We use apc-cap (newer).
 
+---
+
+## 2026-06-13 — Phase 2 (quiz engine MVP)
+
+**Done**
+- FastAPI app (`app/main.py`): server-rendered dashboard + quiz-runner shell
+  (Jinja), with a small JSON API the vanilla-JS runner drives.
+- **Data access** (`app/db/queries.py`): question fetch (answer-stripped for
+  quizzes), server-side grading + append to `attempts`, section stats, the 8
+  section names (original labels, not lesson content).
+- **Deterministic mastery** (`app/engine/mastery.py`): per-section mastery % +
+  coverage %, overall summary, Honours/pass bars (80/70). Pure arithmetic over
+  `attempts` — idempotent (constitution §5).
+- **Quiz construction** (`app/quiz.py`): per-section drill (random N) + 100-Q
+  mock exam — section-proportional via largest-remainder, spread across
+  subsections (round-robin over shuffled buckets). Randomness lives here, NOT in
+  the analysis path.
+- **Client** (`app/static/quiz.js` + `style.css`, templates): drill gives
+  per-question feedback; exam defers to a results screen with the **70% pass and
+  80% Honours lines** + per-section breakdown + timer.
+- **Smoke test** (`tests/smoke_test.py`) against a throwaway DB copy: health,
+  no-answer-leak in drill+exam payloads, 100-Q proportional distribution,
+  server-side grading correctness, `attempts` rows written, deterministic mastery
+  (1/2 ⇒ 50%), pages render. **All pass.** Verified a real uvicorn boot too.
+
+**Decisions**
+- **Correct answers never ship in the quiz payload** — `/api/quiz` strips
+  `correct_index`; `/api/attempt` grades server-side and returns correctness.
+  Keeps the `attempts` log the sole source of truth and avoids trivially leaking
+  the key to the page.
+- Mock exam proportionality is at the **section** level for the MVP (matches the
+  bank distribution exactly: 20/10/20/6/15/14/9/6). Finer per-subsection
+  proportionality + adaptive (θ-aware) selection are deferred to Phase 4.5.
+- Mastery v1 = correct/answered all-time per section. Trend, fresh-vs-review, and
+  the §6d.4 coverage guarantee come in Phases 4.5/5; the dashboard's "all
+  sections Honours" flag is a coarse placeholder, not the terminal readiness
+  signal.
+- Default drill size 20; mock 100.
+
 **Open / next step**
-- **Next: Phase 2** — quiz engine MVP (per-section drill + 100-Q mock with 70%
-  and 80% lines), recording every answer to `attempts`, minimal dashboard.
+- **Next: Phase 3** — interactive learning layer (Ohm's law, reactance/resonance,
+  dB, SWR/impedance, wavelength↔frequency), original per-section lesson text, and
+  the Learn → Interact → Drill flow.
 
 **How to run**
 ```
