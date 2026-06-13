@@ -1,0 +1,26 @@
+# Secrets — never commit (constitution §4, AGENT.md)
+.env
+*.key
+
+# Local Claude Code settings (personal, machine-specific)
+.claude/settings.local.json
+
+# Local data store (SQLite lives on NAS-backed volume in prod; never in git)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.sqlite
+
+# Downloaded source material — do NOT redistribute (constitution §2/§3).
+# The ISED bank is a Gov-of-Canada work, but we keep binaries out of the repo;
+# re-download via app/db/fetch_sources.py. Parsed questions live in SQLite.
+references/*.pdf
+references/*.zip
+references/*.PDF
+references/_extracted/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
