@@ -418,6 +418,24 @@ backup to NAS, README run/deploy). Plus deferred niceties: trend/decay window,
 tier-scaled lesson depth/spacing, the §6d.6 "Tuned for you" lesson block +
 content_cache (per-section AI-condensed lessons, beyond per-question explanations).
 
+### COST/RATE-LIMIT CORRECTION (post-batch)
+Actual Console charge ≈ **$24** (Chris), vs my pre-batch estimate $12–17 and the
+poller's token-derived $19.34. The gap: (a) my `estimate_cost` under-modelled
+cache-WRITE cost — with batch parallelism the 1h grounding cache mostly missed,
+so ~298 regs requests each re-wrote ~7–8k grounding tokens at 1.25× rather than
+reading at 0.1×; (b) the live dry-run + Opus/Sonnet comparison calls (~$0.4,
+full price); (c) batch billing/rounding. **Also hit org RATE LIMITS** — 984
+large-input requests in one submission consumed a big share of the tier's token
+budget. **Lessons / guardrails to add before any re-run:**
+1. Set a **hard spend limit in the Anthropic Console** (QUESTIONS #15 step 2) —
+   the in-app $15 guard does NOT cover batch (batch is a build step, bypasses it).
+2. Next regeneration: **trim or drop the per-question RIC grounding** (it's the
+   input-token hog; citations validated fine — could ground a small excerpt or
+   only the few citation-heavy subsections), and/or **chunk** the batch.
+3. Add a **batch cost-preview + explicit confirm** + size warning to `submit()`.
+The batch itself succeeded (984/984) — the spend is one-time and now banked; $0
+per study session afterward, regenerate only on a bank revision (~yearly).
+
 **How to run**
 ```
 pip install -r requirements.txt
