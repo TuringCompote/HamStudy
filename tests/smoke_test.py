@@ -176,9 +176,9 @@ def main() -> None:
     assert jr["degraded"] is True
     assert Path(jr["path"]).exists()
 
-    # journal week view
+    # journal week view (embedded on the dashboard)
     from datetime import date as _date
-    assert c.get("/journal").status_code == 200
+    assert "jr-days" in c.get("/").text and "journal.js" in c.get("/").text
     dts = c.get("/api/journal/dates").json()["dates"]
     today = _date.today().isoformat()
     assert today in dts                                  # just wrote it above

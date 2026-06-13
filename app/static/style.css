@@ -229,8 +229,11 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .prop-ground { fill: color-mix(in srgb, var(--ink) 25%, var(--surface)); }
 .prop-ray { fill: none; stroke: var(--accent); stroke-width: 2.5; }
 
-/* journal week view */
+/* journal week view (embedded on the dashboard, above "Today's session") */
+.jr-week-wrap { margin-bottom: var(--sp-6); }
 .jr-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+.jr-head h2 { margin: 0; }
+.jr-write-btn { font-size: 0.8rem; padding: var(--sp-1) var(--sp-3); }
 .jr-week { display: flex; align-items: stretch; gap: var(--sp-2); margin-top: var(--sp-3); }
 .jr-nav { padding: 0 var(--sp-3); font-size: 1.1rem; }
 .jr-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--sp-2); flex: 1; }

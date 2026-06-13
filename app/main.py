@@ -263,11 +263,6 @@ def api_journal():
         conn.close()
 
 
-@app.get("/journal", response_class=HTMLResponse)
-def journal_page(request: Request):
-    return templates.TemplateResponse(request, "journal.html", {})
-
-
 @app.get("/api/journal/dates")
 def api_journal_dates():
     conn = connect()

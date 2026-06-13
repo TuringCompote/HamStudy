@@ -65,27 +65,33 @@ function render() {
     `${fmt(first)} – ${fmt(last)}` + (weekOffset === 0 ? "  (this week)" : "");
 }
 
-el("jr-prev").onclick = () => { weekOffset--; render(); };
-el("jr-next").onclick = () => { weekOffset++; render(); };
+// Only wire up if the journal strip is on this page (it's embedded on the dashboard).
+if (el("jr-days")) {
+  el("jr-prev").onclick = () => { weekOffset--; render(); };
+  el("jr-next").onclick = () => { weekOffset++; render(); };
 
-el("jr-write").onclick = async function () {
-  this.disabled = true; const label = this.textContent; this.textContent = "Writing…";
-  try {
-    await fetch("/api/journal", { method: "POST" });
-    await loadDates();
-    weekOffset = 0;
-    render();
-    loadEntry(iso(new Date()));
-    this.textContent = "Saved";
-  } catch (e) {
-    this.textContent = "Failed";
+  const writeBtn = el("jr-write");
+  if (writeBtn) {
+    writeBtn.onclick = async function () {
+      this.disabled = true; const label = this.textContent; this.textContent = "Writing…";
+      try {
+        await fetch("/api/journal", { method: "POST" });
+        await loadDates();
+        weekOffset = 0;
+        render();
+        loadEntry(iso(new Date()));
+        this.textContent = "Saved";
+      } catch (e) {
+        this.textContent = "Failed";
+      }
+      setTimeout(() => { this.textContent = label; this.disabled = false; }, 1500);
+    };
   }
-  setTimeout(() => { this.textContent = label; this.disabled = false; }, 1500);
-};
 
-(async () => {
-  await loadDates();
-  render();
-  const td = iso(new Date());
-  if (entryDates.has(td)) loadEntry(td);   // auto-open today if present
-})();
+  (async () => {
+    await loadDates();
+    render();
+    const td = iso(new Date());
+    if (entryDates.has(td)) loadEntry(td);   // auto-open today if present
+  })();
+}

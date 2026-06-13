@@ -49,6 +49,20 @@
   </div>
 </section>
 
+<section class="jr-week-wrap">
+  <div class="jr-head">
+    <h2 class="caps muted small">Journal</h2>
+    <button class="btn jr-write-btn" type="button" id="jr-write">Write today's</button>
+  </div>
+  <div class="jr-week">
+    <button class="btn jr-nav" type="button" id="jr-prev" aria-label="earlier week">‹</button>
+    <div class="jr-days" id="jr-days"></div>
+    <button class="btn jr-nav" type="button" id="jr-next" aria-label="later week">›</button>
+  </div>
+  <div class="jr-range muted small" id="jr-range"></div>
+  <div id="jr-entry" class="jr-entry"></div>
+</section>
+
 <section class="session-card">
   <div class="session-head">
     <span class="session-icon" aria-hidden="true">◎</span> Today's session
@@ -95,7 +109,8 @@
   <a class="btn" href="/quiz?mode=exam">100-question mock exam</a>
   {% if summary.review_due %}<a class="btn" href="/quiz?mode=review">Review ({{ summary.review_due }} due)</a>{% endif %}
   <a class="btn" href="/formula-trainer">Formula-sheet trainer</a>
-  <a class="btn" href="/journal">Journal</a>
 </section>
-
+{% endblock %}
+{% block scripts %}
+<script src="/static/journal.js"></script>
 {% endblock %}
