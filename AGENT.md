@@ -7,7 +7,7 @@
 
 ## What this is
 A single-user, self-hosted trainer for the **ISED Basic Amateur Radio Qualification,
-targeting Basic with Honours (80%)** for the user (Chris, Alberta). App name **`Elmer`**
+targeting Basic with Honours (80%)**. App name **`Elmer`**
 (stored once as `config.APP_NAME`; never hardcode it). Visual direction: "instrument
 panel" — neutral light/dark base, one phosphor accent, mono for numbers/IDs/formulas,
 per-section mastery as a segmented S-meter colored by depth tier. All design tokens live
