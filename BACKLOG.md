@@ -15,12 +15,14 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] (P0) Confirm `B-AAA-BBB-CCC` ID + answer-in-brackets format from the official page.
 - [x] (P0) Decide parser approach: official PDF = ground truth; adapt `canadian-ham-exam`
       (v1.0.1, 2025-02-26, UTF-8); cross-check count vs 984 + HamStudy CA_B_2025.
-- [~] (P0, do at build start) Download the bank PDF + Reference Material ZIP into
-      `references/`. **Bank PDF: done** (`amateur_basic_questions_en.pdf`, via the
-      lowercase apc-cap data-file URL). **ZIP still pending** — the dated `documents/...`
-      URL 404s; needs a refreshed URL (non-blocking; feeds Phase 4). **English-only.**
-- [ ] Download RIC-3, RBR-4, RIC-1 into `references/` for the AI explanation layer
-      (prompt-cache these at runtime). *(URLs to resolve; tracked in `fetch_sources.py`.)*
+- [x] (P0, do at build start) Download the bank PDF + Reference Material ZIP into
+      `references/`. **Done** — bank PDF (apc-cap data file) + Reference Material ZIP
+      (labelled "Training" + unlabelled "Exam" formula/diagram sheets, auto-extracted to
+      `_extracted/`). Correct ZIP path is `sites/default/files/documents/`. **English-only.**
+- [x] Download RIC-3, RBR-4, RIC-1 into `references/` for the AI explanation layer
+      (prompt-cache these at runtime). **Done** — RBR-4 as PDF; RIC-3 & RIC-1 are HTML-only
+      (no PDF published), saved as faithful HTML for Phase-5 text extraction. All in
+      `app/db/fetch_sources.py` (reproducible re-download).
 
 ## Phase 1 — Data foundation  *(done 2026-06-13 → see `LOG.md`)*
 - [x] (P0) Build the ingest script: official bank → `questions` table (with `bank_version`).

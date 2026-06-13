@@ -17,6 +17,7 @@ data/*.sqlite
 references/*.pdf
 references/*.zip
 references/*.PDF
+references/*.html
 references/_extracted/
 
 # Python

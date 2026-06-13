@@ -49,11 +49,22 @@ decisions, next step.
   source binaries); the parsed SQLite is the app's data. Re-download is scripted
   in `app/db/fetch_sources.py`.
 
+**Reference material (resolved same session)**
+- Found the working URLs (the PHASE0 `documents/...` paths were missing the
+  `sites/default/files/` segment). Downloaded into `references/` (git-ignored):
+  - **Reference Material ZIP** → auto-extracted to `_extracted/`: the **"Exam"**
+    PDF (5 pp, *unlabelled* — exam-legal sheet to train with) and the **"Training"**
+    PDF (7 pp, *labelled* study aid). For Phase 4 formula trainer.
+  - **RBR-4** (Standards for Operation) → PDF.
+  - **RIC-3** and **RIC-1** → HTML-only on ISED (no PDF published), saved as
+    faithful server-rendered HTML; clean text extraction deferred to Phase 5 when
+    the AI reference layer consumes them.
+- `app/db/fetch_sources.py` now re-downloads all five sources reproducibly
+  (verified end-to-end; ZIP auto-extracts). `.gitignore` excludes `*.html` too.
+- Note: a 2025-07-15-dated bank copy also exists on ised-isde, while the apc-cap
+  data file is the 2025-08-26 re-issue — same 984 pool. We use apc-cap (newer).
+
 **Open / next step**
-- Reference Material ZIP (labelled + unlabelled formula sheets) and RIC-3 / RBR-4
-  / RIC-1: the dated `documents/...` ZIP URL from PHASE0 404'd. Need to resolve
-  the current URLs (non-blocking for Phase 1; these feed Phase 4 formula trainer
-  + Phase 5 AI reference layer). Tracked in `fetch_sources.py` / BACKLOG.
 - **Next: Phase 2** — quiz engine MVP (per-section drill + 100-Q mock with 70%
   and 80% lines), recording every answer to `attempts`, minimal dashboard.
 
