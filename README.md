@@ -8,6 +8,22 @@ for explanations, misconception diagnosis, and the journal.
 
 Stack: **FastAPI + SQLite + vanilla JS/SVG**, one Docker container, LAN/VPN-only.
 
+> **Disclaimer.** I built this for my own use, to study for the Canadian Basic Amateur
+> Radio exam, and I'm sharing it free for anyone to use. It is provided **"AS IS", with
+> no warranties of any kind, express or implied** — including, without limitation,
+> accuracy, currency, completeness, fitness for a particular purpose, or that using it
+> will help you pass any exam. **Use at your own risk; the author accepts no liability**
+> for any loss or damage arising from its use (see `LICENSE`).
+>
+> This is a **personal, unofficial** tool — **not affiliated with, endorsed by, or
+> sponsored by** Innovation, Science and Economic Development Canada (ISED), Radio
+> Amateurs of Canada (RAC), or any club or organization. It is **not a substitute for
+> the official ISED study materials and regulations**; always confirm against the
+> current official sources. The ISED question bank and reference documents are works of
+> the Government of Canada obtained from public sources; the author **claims no ownership
+> of that content**, and all rights and trademarks remain with their respective owners.
+> Nothing here is legal advice.
+
 ---
 
 ## What it does
@@ -117,3 +133,9 @@ data/ (gitignored: SQLite, recommendation.json, journal/)   references/ (gitigno
 Trend/decay window on tiers · tier-scaled lesson depth + a "tuned for you" condensed-lesson
 cache (`content_cache`) · optional read-only Cowork deep-dive skill · Phase 7: Advanced
 Qualification (re-ingest the Advanced bank, reuse the engine).
+
+## License
+
+Original code: **MIT** (see `LICENSE`) — provided "as is", no warranty. The ISED question
+bank and reference documents are public Government of Canada works and are not covered by
+that license; the author claims no ownership of them.
