@@ -140,6 +140,42 @@ these, so this is a cleanup pass before Phase 3 builds the SVG tools.
 **Next:** Phase 3 — concept tools (Ohm/reactance/dB/SWR/wavelength) as SVG+JS
 theming from `tokens.css`, original lesson text, Learn → Interact → Drill.
 
+---
+
+## 2026-06-13 — Phase 3 (interactive learning layer — P0 set)
+
+**Done**
+- **Learn → Interact → Drill** section flow: `GET /section/{n}` + `section.html`.
+  Each page = original lesson (Learn) → the section's concept tools (Interact) →
+  a drill button (Drill). Dashboard section names now link to `/section/{n}`.
+- **Original lesson text for all 8 sections** (`app/content/sections/section{1..8}.md`,
+  rendered by `app/content` via python-markdown). Written fresh, pitched for an
+  experienced electronics learner (constitution §3 — no copied course prose).
+- **Client tool framework** (`static/tools/registry.js`): tools self-register and
+  mount into `<div data-tool="id">`; shared SVG/format helpers; errors are caught
+  so one broken tool can't blank the page.
+- **Five P0 concept tools** (SVG + vanilla JS, themed from `tokens.css`):
+  - `ohms.js` — any two of V/I/R/P → other two + the formula used + a live circuit.
+  - `reactance.js` — L/C/f controls; X_L & X_C with a log-log plot crossing at f₀.
+  - `decibel.js` — ratio ↔ dB, power(10·log)/voltage(20·log) toggle, S-unit context.
+  - `swr.js` — load R+jX & Z₀ → Γ, SWR, reflected %, return loss + delivered/reflected bar.
+  - `wavelength.js` — f ↔ λ, ½λ dipole & ¼λ vertical with velocity factor.
+- **Tool→section map** (`app/tools.py`): §5 = ohms/reactance/decibel, §6 = swr/wavelength.
+- Smoke test extended: all 8 section pages 200, `/section/9` → 404, lesson exists
+  for every section, all tool assets + tokens.css serve. **All pass.** JS passes
+  `node --check`; tool formulas verified by hand.
+
+**Decisions**
+- Lesson content as markdown files (not DB) — easy to edit, version, keep original.
+- Tools are pure client-side (no answers/PII leave the browser); they're generic
+  widgets that will theme automatically if the accent flips teal↔amber.
+- **Not yet done:** the 3 non-P0 tools (series/parallel R&C, band-plan explorer,
+  propagation visual) remain in BACKLOG. Headless JS execution wasn't run — the
+  interactive behavior should get a quick browser eyeball.
+
+**Next:** remaining Phase 3 non-P0 tools, or proceed to Phase 4 (spaced repetition
++ review queue). Recommend a quick browser check of the tools first.
+
 **How to run**
 ```
 pip install -r requirements.txt

@@ -26,7 +26,7 @@
       {% for s in sections.values() %}
       <tr>
         <td class="num">{{ s.section }}</td>
-        <td>{{ s.name }}</td>
+        <td><a href="/section/{{ s.section }}">{{ s.name }}</a></td>
         <td class="bar-cell">
           {% if s.mastery_pct is not none %}
             <div class="smeter-row">

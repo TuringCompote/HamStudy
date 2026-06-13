@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} — {{ APP_NAME }}{% endblock %}
+{% block content %}
+
+<nav class="crumbs"><a href="/">Dashboard</a> &rsaquo; <span class="mono">Section {{ section }}</span></nav>
+
+<div class="section-head">
+  <h1>{{ name }}</h1>
+  {% if stats.mastery_pct is not none %}
+    <span class="section-mastery smeter-row">
+      <span class="smeter" style="width:120px" title="{{ stats.correct }}/{{ stats.answered }} correct">
+        <span class="smeter-fill tier-{{ stats.band }}" style="width: {{ stats.mastery_pct }}%"></span>
+      </span>
+      <span class="smeter-val">{{ stats.mastery_pct }}%</span>
+    </span>
+  {% endif %}
+</div>
+
+<!-- Learn -->
+<section class="learn">
+  <h2 class="step-h"><span class="step">1</span> Learn</h2>
+  {% if lesson_html %}
+    <div class="lesson">{{ lesson_html | safe }}</div>
+  {% else %}
+    <p class="muted">Lesson text for this section is coming soon.</p>
+  {% endif %}
+</section>
+
+<!-- Interact -->
+<section class="interact">
+  <h2 class="step-h"><span class="step">2</span> Interact</h2>
+  {% if tools %}
+    {% for t in tools %}
+      <div class="tool-wrap">
+        <div class="tool-title"><strong>{{ t.name }}</strong>
+          <span class="muted small">{{ t.blurb }}</span></div>
+        <div class="tool" data-tool="{{ t.id }}"></div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted">No interactive tool for this section yet — head to the drill.</p>
+  {% endif %}
+</section>
+
+<!-- Drill -->
+<section class="drill">
+  <h2 class="step-h"><span class="step">3</span> Drill</h2>
+  <p class="muted">Practice the real ISED bank questions for this section.</p>
+  <a class="btn btn-primary" href="/quiz?mode=drill&section={{ section }}">
+    Drill Section {{ section }}</a>
+</section>
+
+{% endblock %}
+{% block scripts %}
+{% if tools %}
+  <script src="/static/tools/registry.js"></script>
+  {% for t in tools %}<script src="{{ t.js }}"></script>{% endfor %}
+{% endif %}
+{% endblock %}

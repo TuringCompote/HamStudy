@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from app.db import queries
 from app.db.init_db import connect
 from app.engine import mastery
-from app import quiz, config
+from app import quiz, config, tools, content
 
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
@@ -56,6 +56,28 @@ def dashboard(request: Request):
         request,
         "dashboard.html",
         {"sections": by_section, "summary": summary},
+    )
+
+
+@app.get("/section/{section}", response_class=HTMLResponse)
+def section_page(request: Request, section: int):
+    if not 1 <= section <= 8:
+        raise HTTPException(404, "section must be 1..8")
+    conn = connect()
+    try:
+        stats = mastery.compute_section_mastery(conn)[section]
+    finally:
+        conn.close()
+    return templates.TemplateResponse(
+        request,
+        "section.html",
+        {
+            "section": section,
+            "name": queries.SECTION_NAMES[section],
+            "lesson_html": content.lesson_html(section),
+            "tools": tools.tools_for_section(section),
+            "stats": stats,
+        },
     )
 
 

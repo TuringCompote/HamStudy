@@ -44,16 +44,19 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] Minimal dashboard. Per-section mastery bars + coverage + drill/exam entry points.
 
 ## Phase 3 — Interactive learning layer  *(the differentiator — prioritize)*
-- [ ] (P0) Ohm's Law / power triangle solver.
-- [ ] (P0) Reactance & resonance playground (L, C, f sliders; X_L, X_C, f_resonant).
-- [ ] (P0) Decibel converter (ratio ↔ dB; 6 dB/S-unit worked examples).
-- [ ] (P0) SWR / impedance matching visualizer (mismatch → SWR, reflected power, line loss).
-- [ ] (P0) Wavelength ↔ frequency tool (½λ dipole, ¼λ vertical helper).
+- [x] (P0) Ohm's Law / power triangle solver. `static/tools/ohms.js` (any 2 of V/I/R/P → other 2 + formula + circuit SVG).
+- [x] (P0) Reactance & resonance playground (L, C, f; X_L, X_C, f_resonant + log-log plot). `reactance.js`.
+- [x] (P0) Decibel converter (ratio ↔ dB, power/voltage toggle, 6 dB/S-unit examples). `decibel.js`.
+- [x] (P0) SWR / impedance matching visualizer (R+jX & Z₀ → Γ, SWR, reflected %, return loss, bar). `swr.js`.
+- [x] (P0) Wavelength ↔ frequency tool (½λ dipole, ¼λ vertical, velocity factor). `wavelength.js`.
 - [ ] Series/parallel resistance & capacitance calculator with live schematic.
 - [ ] Band-plan explorer (Canadian bands, privileges by qualification, primary/secondary).
 - [ ] Propagation visual (ionospheric layers vs day/night, sky/ground/LOS, MUF).
-- [ ] (P0) Write **original** short lesson text per section (no copied course prose).
-- [ ] (P0) Wire the "Learn → Interact → Drill" flow per section.
+- [x] (P0) Write **original** short lesson text per section (no copied course prose).
+      `app/content/sections/section{1..8}.md` — all 8 written, rendered via `app/content`.
+- [x] (P0) Wire the "Learn → Interact → Drill" flow per section. `GET /section/{n}` +
+      `section.html`; tools mounted via `static/tools/registry.js` (data-tool framework).
+      *(Browser visual/interaction check still recommended — JS untested headless.)*
 
 ## Phase 4 — Spaced repetition + review queue
 - [ ] (P0) Deterministic scheduler: ease/interval per question (Leitner or SM-2-lite).

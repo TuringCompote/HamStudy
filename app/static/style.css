@@ -75,6 +75,62 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .smeter-val { margin-left: var(--sp-2); font-size: 0.82rem; font-weight: 600; }
 .smeter-row { display: flex; align-items: center; }
 
+/* section page: Learn -> Interact -> Drill */
+.crumbs { color: var(--muted); font-size: 0.9rem; margin-bottom: var(--sp-3); }
+.crumbs a { color: var(--muted); }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+.section-mastery { flex: 0 0 auto; }
+.step-h { display: flex; align-items: center; gap: var(--sp-3); }
+.step {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.6rem; height: 1.6rem; border-radius: 50%; font-size: 0.9rem;
+  font-family: var(--font-mono); background: var(--surface-2);
+  border: var(--border-w) solid var(--border); color: var(--accent);
+}
+.lesson { background: var(--surface); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow); }
+.lesson h1 { font-size: 1.3rem; }
+.lesson h1:first-child { margin-top: 0; }
+.lesson code { font-family: var(--font-mono); background: var(--surface-2);
+  padding: 0.05rem 0.3rem; border-radius: 3px; }
+.lesson blockquote { margin: var(--sp-4) 0 0; padding: var(--sp-2) var(--sp-4);
+  border-left: 3px solid var(--accent); color: var(--muted); }
+
+/* concept tools */
+.tool-wrap { background: var(--surface); border: var(--border-w) solid var(--border);
+  border-radius: var(--radius); padding: var(--sp-4); margin-bottom: var(--sp-4); box-shadow: var(--shadow); }
+.tool-title { margin-bottom: var(--sp-3); display: flex; gap: var(--sp-3); align-items: baseline; flex-wrap: wrap; }
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--sp-3); }
+.tool-field { display: flex; flex-direction: column; gap: var(--sp-1); }
+.tool-label { font-size: 0.8rem; color: var(--muted); }
+.tool-input {
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-sm);
+  border: var(--border-w) solid var(--border); background: var(--surface-2);
+  color: var(--ink); font-size: 1rem; width: 100%;
+}
+.tool-input:focus { outline: none; border-color: var(--accent); }
+.tool-input.computed { color: var(--accent); border-style: dashed; background: var(--surface); }
+.tool-note { margin-top: var(--sp-3); }
+.tool-svg { display: block; margin: var(--sp-4) auto 0; max-width: 340px; }
+.tool-svg .wire { stroke: var(--muted); stroke-width: 2; fill: none; }
+.tool-svg .node { stroke: var(--accent); stroke-width: 2; fill: var(--surface-2); }
+.tool-svg .svg-val { fill: var(--ink); font-family: var(--font-mono); font-size: 11px; }
+.tool-svg .svg-val.accent { fill: var(--accent); }
+.tool-svg .axis { stroke: var(--border); stroke-width: 1; }
+.tool-svg .curve { fill: none; stroke-width: 2; }
+.tool-range { width: 100%; accent-color: var(--accent); }
+.tool-readout { margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-2); border-radius: var(--radius-sm); font-size: 0.95rem; }
+.tool-readout .accent, .accent { color: var(--accent); }
+.tool-toggle { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.btn.seg { font-size: 0.85rem; padding: var(--sp-1) var(--sp-3); }
+.btn.seg.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.swr-bar { display: flex; height: 1.4rem; margin-top: var(--sp-3);
+  border: var(--border-w) solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--track); }
+.swr-seg { height: 100%; transition: width 0.1s linear; }
+.swr-seg.fwd { background: var(--accent); }
+.swr-seg.ref { background: var(--bad); }
+
 /* quiz */
 .quiz-head { display: flex; justify-content: space-between; align-items: baseline; }
 .quiz-head small { color: var(--muted); font-weight: 400; font-size: 0.9rem; }

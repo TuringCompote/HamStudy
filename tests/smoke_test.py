@@ -90,6 +90,25 @@ def main() -> None:
     assert c.get("/quiz?mode=exam").status_code == 200
     assert c.get("/quiz?mode=drill&section=3").status_code == 200
 
+    # section pages (Learn -> Interact -> Drill)
+    for s in range(1, 9):
+        assert c.get(f"/section/{s}").status_code == 200, s
+    assert c.get("/section/9").status_code == 404
+    s5 = c.get("/section/5").text
+    assert "Learn" in s5 and "Interact" in s5 and "Drill" in s5
+    assert 'data-tool="ohms"' in s5
+    assert "Basic Electronics" in s5
+
+    # tool assets + lesson content served
+    assert c.get("/static/tokens.css").status_code == 200
+    for f in ["registry", "ohms", "reactance", "decibel", "swr", "wavelength"]:
+        assert c.get(f"/static/tools/{f}.js").status_code == 200, f
+
+    # lesson text exists for every section (original content)
+    from app import content
+    for s in range(1, 9):
+        assert content.lesson_html(s), f"missing lesson for section {s}"
+
     conn.close()
     print("\nALL SMOKE CHECKS PASSED")
 
