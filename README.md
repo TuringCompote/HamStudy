@@ -115,6 +115,7 @@ app/
 prompts/             explain · diagnose · narrate · condense · batch_explain  (Console-tunable)
 seed/explanations.jsonl   committed batch explanations (portable; rebuilds the DB on deploy)
 deploy/              install.sh · elmer.service          tests/  smoke_test.py
+docs/ai-evals/       AI model comparison + eval cases (Console Evaluation tool)
 Dockerfile · docker-compose.yml · requirements.txt
 data/ (gitignored: SQLite, recommendation.json, journal/)   references/ (gitignored downloads)
 ```
