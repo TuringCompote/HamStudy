@@ -39,3 +39,32 @@ can `git pull`.
 ---
 
 ## (append new entries below)
+
+## 2026-06-13 — design: trainer cartridges (generalize the engine)
+
+Wrote `specs/trainer-cartridges.md` — a design-only proposal (no code) to turn
+Elmer's engine into a **multi-cartridge** trainer. Insight: the deterministic
+engine (mastery/θ/Leitner/readiness) only ever consumes `attempts` + scopes, so
+the ham bank is just cartridge #1; new domains slot in beside it without touching
+the scoring math (constitution §6).
+
+Decided with the user — four new cartridges: **Morse/CW** (Koch audio decode),
+**Language/vocab** (spaced-rep + AI mnemonics/roleplay), **Calibration**
+(confidence-tagged answers, deterministic Brier scoring), **Inquiry** (ask-the-
+right-question, deterministic info-gain over a hidden hypothesis set; AI is only
+the oracle).
+
+Schema plan is **additive/migration-safe**: new `cartridges` + generic `items`
+tables (ham keeps `questions`), additive columns on `attempts`
+(`cartridge/item_id/scope_path/confidence/extra`) preserving append-only, and
+`cartridge` added to the `progress` PK. New AI methods `generate` + `roleplay`
+(stub-safe, budget-guarded, prompt-externalized). Build sequence: framework →
+calibration → morse → vocab → inquiry, each a small committed step with the stub
+smoke test green.
+
+Note: AGENT.md says don't add Morse before the user asks — **the user asked today**.
+
+Next step: user to answer §10 open questions (first vocab deck, calibration host,
+switcher placement, Morse speed, naming), then build step 1 (framework) behind a
+no-behavior-change commit.
+
