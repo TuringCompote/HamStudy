@@ -72,18 +72,27 @@ def compute_schedule(conn) -> dict[str, dict]:
 
 
 def due_reviews(conn, today: date | None = None, limit: int | None = None) -> list[str]:
-    """Question ids due for review (due_date <= today), most-overdue first, then
-    lowest box (weakest) first, then id for a stable order."""
-    today = today or date.today()
-    sched = compute_schedule(conn)
-    due = [
-        (qid, s) for qid, s in sched.items()
-        if date.fromisoformat(s["due_date"]) <= today
-    ]
-    due.sort(key=lambda t: (t[1]["due_date"], t[1]["box"], t[0]))
-    ids = [qid for qid, _ in due]
+    """The review queue = questions whose MOST RECENT attempt was WRONG — the
+    outstanding mistakes you haven't yet re-answered correctly — oldest miss first.
+
+    (Spaced repetition re-surfacing of already-correct questions is intentionally
+    excluded: "review" means the things you got wrong, not everything you've seen.
+    The Leitner `compute_schedule` above still models full SR if we want it later.)
+    """
+    rows = conn.execute(
+        """
+        SELECT question_id FROM (
+            SELECT question_id, correct, answered_at,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY question_id ORDER BY answered_at DESC, id DESC) rn
+            FROM attempts
+        ) WHERE rn = 1 AND correct = 0
+        ORDER BY answered_at
+        """
+    ).fetchall()
+    ids = [r["question_id"] for r in rows]
     return ids[:limit] if limit else ids
 
 
 def review_due_count(conn, today: date | None = None) -> int:
-    return len(due_reviews(conn, today))
+    return len(due_reviews(conn))
