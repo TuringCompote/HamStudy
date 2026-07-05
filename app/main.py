@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 
 from app.db import queries
 from app.db.init_db import connect
-from app.engine import mastery, coach, diagnostic, recommend, analysis
+from app.engine import mastery, coach, diagnostic, recommend, analysis, adaptive
 from app import quiz, config, tools, content, formulas
 from app.coaching.ai_provider import get_provider
 from app.coaching import journal as journal_mod, usage as usage_mod, corpus as corpus_mod
@@ -28,6 +28,8 @@ from app.coaching import explain_batch
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 templates.env.globals["APP_NAME"] = config.APP_NAME  # available in every template
+# tier map + pass/honours bars, emitted once for every page (window.ElmerConfig)
+templates.env.globals["UI_CONFIG"] = mastery.ui_config()
 
 app = FastAPI(title=f"{config.APP_NAME} — Canadian Basic (Honours) trainer")
 
@@ -73,10 +75,12 @@ def dashboard(request: Request):
         diagnostic.apply_diagnostic_tiers(conn, by_section)
         summary = coach.dashboard_summary(conn, by_section)
         rec = recommend.refresh(conn)  # build + persist recommendation.json, then read it back
-        # surface per-section trend on the rows
+        # surface per-section trend + the confident-but-wrong lamp on the rows
+        wrong = analysis.wrong_classification(conn)
         for s in by_section.values():
             ps = rec["readiness"]["per_section"].get(s["section"], {})
             s["trend"] = ps.get("trend", "new")
+            s["fast_wrong"] = wrong.get(s["section"], {}).get("fast_wrong", 0)
     finally:
         conn.close()
     return templates.TemplateResponse(
@@ -97,6 +101,20 @@ def section_page(request: Request, section: int):
         diagnostic.apply_diagnostic_tiers(conn, by_section)
         stats = by_section[section]
         has_diag = diagnostic.has_diagnostic(conn, section)
+        # instrument telemetry the engine already computes (pure presentation):
+        # ability θ, fresh-vs-review split, confident-but-wrong count
+        telemetry = None
+        if stats["answered"]:
+            theta, _b = adaptive.compute_ability_difficulty(conn)
+            fvr = analysis.fresh_vs_review(conn).get(section, {})
+            wc = analysis.wrong_classification(conn).get(
+                section, {"fast_wrong": 0, "slow_wrong": 0})
+            telemetry = {
+                "theta": f"{theta.get(section, 0.0):+.2f}",
+                "fresh_pct": fvr.get("fresh_pct"),
+                "review_pct": fvr.get("review_pct"),
+                "fast_wrong": wc["fast_wrong"],
+            }
     finally:
         conn.close()
     # offer the placement probe when the section is essentially unrated
@@ -111,6 +129,7 @@ def section_page(request: Request, section: int):
             "tools": tools.tools_for_section(section),
             "stats": stats,
             "offer_diagnostic": offer_diagnostic,
+            "telemetry": telemetry,
         },
     )
 
@@ -137,8 +156,8 @@ def manifest():
             "short_name": config.APP_NAME,
             "start_url": "/",
             "display": "standalone",
-            "background_color": "#0d1311",
-            "theme_color": "#0d1311",
+            "background_color": "#0a0e0d",   # mirrors --bg (dark) in tokens.css
+            "theme_color": "#0a0e0d",
             "icons": [
                 {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
                 {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
@@ -176,7 +195,11 @@ def quiz_page(request: Request, mode: str = "drill", section: int | None = None,
 def api_sections():
     conn = connect()
     try:
-        return {"sections": mastery.compute_section_mastery(conn),
+        by_section = mastery.compute_section_mastery(conn)
+        # same tier semantics as the dashboard: diagnostic placement fills in
+        # sections that don't have enough fresh attempts yet
+        diagnostic.apply_diagnostic_tiers(conn, by_section)
+        return {"sections": by_section,
                 "summary": mastery.overall_summary(conn)}
     finally:
         conn.close()

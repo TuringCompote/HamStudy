@@ -24,7 +24,24 @@ PASS_BAR = 70.0
 # tunable here. A diagnostic probe (§6d.1) can seed the tier before enough fresh
 # attempts exist. Colors: test-out=teal, light=blue, standard=grey, deep=amber.
 TIER_CUTOFFS = (("test-out", 80.0), ("light", 70.0), ("standard", 55.0))  # else "deep"
-_TIER_CSS = {"test-out": "testout", "light": "light", "standard": "standard", "deep": "deep"}
+TIER_CSS = {"test-out": "testout", "light": "light", "standard": "standard", "deep": "deep"}
+_TIER_CSS = TIER_CSS  # back-compat alias
+
+
+def ui_config() -> dict:
+    """The single UI contract for tier names/colors and the exam bars.
+
+    Injected into every page as `window.ElmerConfig` (base.html) and looped for
+    the dashboard tier legend. quiz.js and the templates read this — they must
+    never restate the cutoffs or the tier→CSS map."""
+    tiers = [{"name": n, "css": TIER_CSS[n], "min_pct": c} for n, c in TIER_CUTOFFS]
+    tiers.append({"name": "deep", "css": TIER_CSS["deep"], "min_pct": None})
+    return {
+        "pass_bar": PASS_BAR,
+        "honours_bar": HONOURS_BAR,
+        "tier_css": TIER_CSS,
+        "tiers": tiers,
+    }
 
 
 def depth_tier(pct: float | None) -> str | None:

@@ -1,0 +1,10 @@
+Self-hosted webfonts (latin subsets, woff2) — both licensed under the
+SIL Open Font License 1.1 (https://openfontlicense.org):
+
+- Chakra Petch (500, 700) — Copyright 2018 The Chakra Petch Project Authors
+  (Cadson Demak)  https://fonts.google.com/specimen/Chakra+Petch
+- IBM Plex Mono (400, 600) — Copyright 2017 IBM Corp.
+  https://fonts.google.com/specimen/IBM+Plex+Mono
+
+Self-hosted because the app runs on a LAN with no CDN access (see
+specs/visual-redesign.md). @font-face declarations live in app/static/tokens.css.

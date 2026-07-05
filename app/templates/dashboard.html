@@ -89,7 +89,8 @@
   <h2 class="caps muted small">Per-section mastery</h2>
   {% for s in sections.values() %}
   <a class="mrow" href="/section/{{ s.section }}">
-    <span class="mrow-name">{{ s.short }}</span>
+    <span class="mrow-name">{{ s.short }}{% if s.fast_wrong %}<span class="lamp lamp-warn"
+      title="{{ s.fast_wrong }} confident-but-wrong (answered fast, missed) — likely misconception"></span>{% endif %}</span>
     <span class="smeter mrow-meter" title="fresh: {{ s.fresh_correct }}/{{ s.fresh_answered }} correct">
       {% if s.fresh_pct is not none %}
       <span class="smeter-fill tier-{{ s.tier_css }}" style="width: {{ s.fresh_pct }}%"></span>
@@ -103,10 +104,9 @@
   {% endfor %}
 
   <div class="tier-legend small muted">
-    <span class="tier-text-testout">test-out (≥80%)</span>
-    <span class="tier-text-light">light</span>
-    <span class="tier-text-standard">standard</span>
-    <span class="tier-text-deep">deep</span>
+    {% for t in UI_CONFIG.tiers %}
+    <span class="tier-text-{{ t.css }}">{{ t.name }}{% if t.min_pct is not none %} (≥{{ t.min_pct | int }}%){% endif %}</span>
+    {% endfor %}
   </div>
 </section>
 

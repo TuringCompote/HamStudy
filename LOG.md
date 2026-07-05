@@ -156,3 +156,44 @@ isolated preview. Deploy: Python changed ⇒ `git pull && docker compose up -d -
 
 Next: instrument-panel visual redesign (fresh session so the frontend-design plugin
 loads), then tools overhaul / data-safety / bank freshness per the round-1 plan.
+
+## 2026-07-05 — instrument-panel visual redesign (specs/visual-redesign.md executed)
+
+Contract-first order from the handoff spec, with the frontend-design plugin loaded:
+
+**Step 1 — constants consolidated.** New `mastery.ui_config()` is the single source
+of the tier→CSS map + pass/honours bars. `base.html` injects it on every page as
+`window.ElmerConfig` plus `--bar-pass`/`--bar-honours` CSS props; quiz.js (tierCss,
+exam-line chips, verdict thresholds), the dashboard tier legend, and the topbar
+tagline all read it — the hardcoded copies are deleted. `/api/sections` now applies
+`diagnostic.apply_diagnostic_tiers`, so it agrees with the dashboard for low-data
+sections.
+
+**Step 2 — tokens.css filled out.** Type scale (`--fs-*`), elevation (`--elev-1/2`,
+`--well`), motion (`--dur-*`, `--ease-out`), `--focus-ring`, phosphor glow
+(`--glow`, `--glow-strong`), opaque `--surface-raised`, and the propagation-tool sky
+colors tokenized (`--sky-day/night`). Inter (named but never loaded) replaced with
+self-hosted woff2 (no CDN on the LAN): **Chakra Petch 500/700** (faceplate display
+lettering) + **IBM Plex Mono 400/600** (every readout) — `app/static/fonts/`, OFL,
+~50 KB total. The documented one-line accent swap (teal→amber) still works, both themes.
+
+**Step 3 — the reskin.** `style.css` rewritten; every DOM/JS contract and smoke-test
+marker preserved. Dark = the shack at night (charcoal faceplate, recessed wells,
+phosphor glow); light = the bench manual (warm paper, same instruments in print).
+S-meters are now bezeled wells with segment slits, glowing tier-colored fills, a
+power-up sweep animation (gated behind prefers-reduced-motion), and **calibration
+ticks at the pass/honours bars on every meter** — the mission etched into the
+instruments. Readiness/stat values read as phosphor displays; buttons are machined
+keys; quiz options got keycap letters. Free telemetry wins (engine outputs that
+nothing displayed, zero new math): confident-but-wrong **warning lamp** per dashboard
+row, and a section-page telemetry strip with **θ**, **fresh vs review accuracy**, and
+a fast-wrong alert chip. Theme-color metas + webmanifest updated to mirror the new
+`--bg`. Step 4 (moving recommend.refresh off GET /) not needed — no polling added.
+
+Verified in the isolated preview (scratch DB copy, stub AI, devserver.py wrapper):
+375×812 dark+light and desktop; drill + Explain (you-picked-this-first intact), exam
+results + miss review, session resume, journal strip/entry + auto-write, diagnostic
+CTA, propagation/band-plan tools, webfonts loading; smoke test green.
+
+**Deploy note:** Python changed (`main.py`, `mastery.py`) ⇒
+`git pull && docker compose up -d --build` (not the UI-only pull+restart path).

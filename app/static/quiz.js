@@ -9,6 +9,9 @@ const SECTION = root.dataset.section ? Number(root.dataset.section) : null;
 const CONFIDENCE = root.dataset.confidence || null;
 const FEEDBACK_MODES = ["drill", "review"]; // exam + diagnostic defer feedback
 const OPTION_LETTERS = ["A", "B", "C", "D"];
+// tier map + pass/honours bars — injected once by base.html (mastery.ui_config);
+// never restate the numbers here
+const CFG = window.ElmerConfig;
 
 let questions = [];
 let idx = 0;
@@ -240,7 +243,7 @@ el("next").onclick = () => {
 };
 
 function tierCss(t) {
-  return ({ "test-out": "testout", light: "light", standard: "standard", deep: "deep" })[t] || "none";
+  return CFG.tier_css[t] || "none";
 }
 
 function refreshJournal() {
@@ -302,8 +305,8 @@ function finish() {
   const linesNote =
     MODE === "exam"
       ? `<div class="exam-lines">
-           <span class="line pass">70% pass</span>
-           <span class="line honours">80% Honours</span>
+           <span class="line pass">${CFG.pass_bar}% pass</span>
+           <span class="line honours">${CFG.honours_bar}% Honours</span>
          </div>`
       : "";
 
@@ -318,11 +321,11 @@ function finish() {
 
   const verdict =
     MODE === "exam"
-      ? pct >= 80
+      ? pct >= CFG.honours_bar
         ? `<p class="verdict ok">Honours-level — ${pct}% 🎉</p>`
-        : pct >= 70
-        ? `<p class="verdict warn">Pass (${pct}%), but below the 80% Honours bar.</p>`
-        : `<p class="verdict bad">${pct}% — below the 70% pass line.</p>`
+        : pct >= CFG.pass_bar
+        ? `<p class="verdict warn">Pass (${pct}%), but below the ${CFG.honours_bar}% Honours bar.</p>`
+        : `<p class="verdict bad">${pct}% — below the ${CFG.pass_bar}% pass line.</p>`
       : `<p class="verdict">${correctCount}/${answered} correct (${pct}%).</p>`;
 
   el("results").innerHTML = `

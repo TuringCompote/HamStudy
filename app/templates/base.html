@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
   <!-- theme-color hexes mirror --bg in tokens.css (light/dark) — keep in sync -->
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f6f8">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1311">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f0efe9">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0e0d">
   <!-- iOS home-screen app (works over plain HTTP; no service worker needed) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -17,11 +17,15 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/static/tokens.css">
   <link rel="stylesheet" href="/static/style.css">
+  <!-- single source of tier map + pass/honours bars (mastery.ui_config) -->
+  <script>window.ElmerConfig = {{ UI_CONFIG | tojson }};</script>
+  <!-- meter calibration marks read these — never restate the cutoffs in CSS -->
+  <style>:root { --bar-pass: {{ UI_CONFIG.pass_bar | int }}%; --bar-honours: {{ UI_CONFIG.honours_bar | int }}%; }</style>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/">{{ APP_NAME }}</a>
-    <span class="tagline">Canadian Basic — targeting Honours (80%)</span>
+    <span class="tagline">Canadian Basic — targeting Honours ({{ UI_CONFIG.honours_bar | int }}%)</span>
   </header>
   <main class="container">
     {% block content %}{% endblock %}

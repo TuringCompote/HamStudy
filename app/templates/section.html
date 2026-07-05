@@ -18,6 +18,25 @@
   {% endif %}
 </div>
 
+{% if telemetry %}
+<div class="telemetry mono">
+  <span class="tm-item" title="ability estimate for this section (Elo/IRT θ — rises as you answer above your level)">
+    <span class="tm-label">θ</span> {{ telemetry.theta }}</span>
+  {% if telemetry.fresh_pct is not none %}
+  <span class="tm-item" title="accuracy on first-ever exposures (the exam-relevant signal)">
+    <span class="tm-label">fresh</span> {{ telemetry.fresh_pct }}%</span>
+  {% endif %}
+  {% if telemetry.review_pct is not none %}
+  <span class="tm-item" title="accuracy on repeat attempts">
+    <span class="tm-label">review</span> {{ telemetry.review_pct }}%</span>
+  {% endif %}
+  {% if telemetry.fast_wrong %}
+  <span class="tm-item tm-alert" title="answered fast but wrong — likely misconception; ask the Coach below">
+    <span class="lamp lamp-warn"></span> {{ telemetry.fast_wrong }} fast-wrong</span>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if offer_diagnostic %}
 <section class="diag-cta">
   <strong>New to this section?</strong>
