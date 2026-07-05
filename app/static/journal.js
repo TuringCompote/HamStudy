@@ -85,7 +85,8 @@ if (el("jr-days")) {
     writeBtn.onclick = async function () {
       this.disabled = true; const label = this.textContent; this.textContent = "Writing…";
       try {
-        await fetch("/api/journal", { method: "POST" });
+        const r = await fetch("/api/journal", { method: "POST" });
+        if (!r.ok) throw new Error("journal write failed: " + r.status);
         await loadDates();
         weekOffset = 0;
         render();

@@ -127,13 +127,14 @@ class AnthropicProvider(AIProvider):
             stub_result=self._stub.diagnose(section_name=section_name, miss_summary=miss_summary),
         )
 
-    def narrate(self, *, recommendation: dict) -> AIResult:
+    def narrate(self, *, digest: dict) -> AIResult:
         import json
-        user = ("Write a short, plain-language 'today's session' note (2-3 sentences, "
-                "encouraging but specific) from this plan:\n" + json.dumps(recommendation))
+        # All voice/length/structure rules live in prompts/narrate.md (Console-
+        # tunable) — the code only supplies the day's facts.
+        user = "Today's study digest (JSON):\n" + json.dumps(digest, ensure_ascii=False)
         return self._call(
-            user=user, call_type="narrate", max_tokens=400,
-            stub_result=self._stub.narrate(recommendation=recommendation),
+            user=user, call_type="narrate", max_tokens=700,
+            stub_result=self._stub.narrate(digest=digest),
         )
 
     def condense(self, *, lesson_text: str, tier: str, gaps: str = "", grounding: str = "") -> AIResult:

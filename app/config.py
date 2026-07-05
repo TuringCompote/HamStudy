@@ -80,14 +80,15 @@ AI_MODEL_CHEAP = os.environ.get("HAMSTUDY_AI_MODEL_CHEAP", "claude-haiku-4-5")  
 AI_MONTHLY_BUDGET_USD = float(os.environ.get("HAMSTUDY_AI_BUDGET", "15"))
 
 # Per-call-type model routing (configurable). LIVE calls avoid Opus (cost/credits):
-# reasoning (explain-fallback / diagnose / condense) -> Sonnet, phrasing -> Haiku.
-# The one-time batch was generated on Opus (highest quality); a re-batch can opt back
-# to Opus via HAMSTUDY_MODEL_EXPLAIN when credits allow.
+# everything routes to Sonnet, including narrate — the journal now reasons over a
+# real day digest (miss themes, deltas), not just phrasing; ~$0.01/entry. Haiku
+# stays available via HAMSTUDY_MODEL_NARRATE. The one-time batch was generated on
+# Opus (highest quality); a re-batch can opt back via HAMSTUDY_MODEL_EXPLAIN.
 AI_MODELS = {
     "explain": os.environ.get("HAMSTUDY_MODEL_EXPLAIN", AI_MODEL_MID),
     "diagnose": os.environ.get("HAMSTUDY_MODEL_DIAGNOSE", AI_MODEL_MID),
     "condense": os.environ.get("HAMSTUDY_MODEL_CONDENSE", AI_MODEL_MID),
-    "narrate": os.environ.get("HAMSTUDY_MODEL_NARRATE", AI_MODEL_CHEAP),
+    "narrate": os.environ.get("HAMSTUDY_MODEL_NARRATE", AI_MODEL_MID),
 }
 
 # Externalized, Console-tunable prompts (prompts/<call_type>.md).

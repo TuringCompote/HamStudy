@@ -38,7 +38,7 @@ class AIProvider(ABC):
     def diagnose(self, *, section_name: str, miss_summary: str, grounding: str = "") -> AIResult: ...
 
     @abstractmethod
-    def narrate(self, *, recommendation: dict) -> AIResult: ...
+    def narrate(self, *, digest: dict) -> AIResult: ...
 
     @abstractmethod
     def condense(self, *, lesson_text: str, tier: str, gaps: str = "", grounding: str = "") -> AIResult: ...
@@ -80,10 +80,28 @@ class StubProvider(AIProvider):
             degraded=True, call_type="diagnose",
         )
 
-    def narrate(self, *, recommendation: dict) -> AIResult:
-        ns = recommendation.get("next_session", {})
-        return AIResult(text=ns.get("rationale", "Keep going — drill your weakest section."),
-                        degraded=True, call_type="narrate")
+    def narrate(self, *, digest: dict) -> AIResult:
+        """Honest plain-text summary straight from the day-digest facts."""
+        n = digest.get("answered", 0)
+        plan = (digest.get("plan") or {}).get("rationale", "")
+        if not n:
+            text = "No questions answered today."
+            if plan:
+                text += f" Tomorrow: {plan}"
+        else:
+            secs = ", ".join(s["short"] for s in digest.get("sections", [])) or "—"
+            pct = digest.get("pct")
+            text = f"Answered {n} question{'s' if n != 1 else ''} at {pct}% ({secs})."
+            mc = digest.get("miss_count", 0)
+            if mc:
+                text += f" {mc} miss{'es' if mc != 1 else ''} queued for review."
+            fw = digest.get("fast_wrong", 0)
+            if fw:
+                text += (f" {fw} of those {'was' if fw == 1 else 'were'} fast-and-wrong "
+                         "— answered confidently, so likely a misconception rather than a gap.")
+            if plan:
+                text += f" Next: {plan}"
+        return AIResult(text=text, degraded=True, call_type="narrate")
 
     def condense(self, *, lesson_text: str, tier: str, gaps: str = "", grounding: str = "") -> AIResult:
         note = {

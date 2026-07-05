@@ -185,6 +185,15 @@ def main() -> None:
     assert jr["degraded"] is True
     assert Path(jr["path"]).exists()
 
+    # day digest (deterministic facts the journal narrates) + journal body
+    from app.engine import day_digest
+    d1 = day_digest.build_day_digest(conn)
+    assert d1 == day_digest.build_day_digest(conn), "day digest not deterministic"
+    assert d1["answered"] >= 2 and d1["miss_count"] >= 1   # this run's attempts
+    assert d1["misses"] and d1["misses"][0]["chosen"]      # miss detail carries texts
+    jtext = Path(jr["path"]).read_text(encoding="utf-8")
+    assert "## Today" in jtext and "### Missed today" in jtext
+
     # journal week view (embedded on the dashboard)
     assert "jr-days" in c.get("/").text and "journal.js" in c.get("/").text
     dts = c.get("/api/journal/dates").json()["dates"]

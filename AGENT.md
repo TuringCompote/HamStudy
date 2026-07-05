@@ -25,7 +25,8 @@ in `app/static/tokens.css`; every SVG tool themes from them.
   Same `attempts` ⇒ same output. Owns: mastery + fresh-accuracy (`mastery.py`), ability θ /
   difficulty (`adaptive.py`), spaced repetition (`scheduler.py`, Leitner), depth tiers +
   diagnostic placement (`mastery.depth_tier`, `diagnostic.py`), trend / miss analysis
-  (`analysis.py`), readiness + coverage guarantee (`readiness.py`), and the
+  (`analysis.py`), the journal's day digest (`day_digest.py`), readiness + coverage
+  guarantee (`readiness.py`), and the
   `recommendation.json` the dashboard reads (`recommend.py`). Question *selection* may use
   randomness (it's not analysis); scoring/tier/scheduling/readiness may not.
 - **AI layer (`app/coaching/*`) — generative only.** Explanations, misconception
@@ -36,9 +37,10 @@ in `app/static/tokens.css`; every SVG tool themes from them.
 - **Readiness = ≥80% fresh-question accuracy in every section AND every subsection probed.**
   Both required before "book the exam."
 - **Models:** the one-time explanation **batch ran on Opus** (best quality, cache-first DB
-  reads forever). **Live calls route off Opus** (user is credit-limited): Sonnet for
-  reasoning (explain-fallback / diagnose / condense), Haiku for narrate. All in
-  `config.AI_MODELS`, env-overridable per type.
+  reads forever). **Live calls route off Opus** (user is credit-limited): Sonnet for all
+  four call types — narrate moved off Haiku when the journal switched to reasoning over
+  the day digest (miss themes, deltas; ~$0.01/entry). Haiku stays available via
+  `HAMSTUDY_MODEL_NARRATE`. All in `config.AI_MODELS`, env-overridable per type.
 - **Budget guard:** every live call logs tokens+cost to `usage` and checks month-to-date vs
   `AI_MONTHLY_BUDGET_USD` (default $15); over budget ⇒ stub. Batch is a build step and is
   NOT counted against this — gate batch spend with the Console limit instead.

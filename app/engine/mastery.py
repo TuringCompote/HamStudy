@@ -57,9 +57,15 @@ def mastery_band(pct: float | None) -> str | None:
     return "low"
 
 
-def compute_section_mastery(conn) -> dict[int, dict]:
+def compute_section_mastery(conn, before: str | None = None) -> dict[int, dict]:
     """Return {section: {name, answered, correct, mastery_pct, seen,
-    size, coverage_pct, meets_honours}} for sections 1..8."""
+    size, coverage_pct, meets_honours}} for sections 1..8.
+
+    `before` (ISO-8601 UTC) restricts the log to attempts strictly earlier than
+    that instant — "mastery as it stood then". Used by the day digest to compute
+    start-of-day deltas; default None = the full log (unchanged behavior)."""
+    cond = "WHERE answered_at < ?" if before else ""
+    params: tuple = (before,) if before else ()
     sizes = {
         r["section"]: r["n"]
         for r in conn.execute(
@@ -69,30 +75,34 @@ def compute_section_mastery(conn) -> dict[int, dict]:
     stats = {
         r["section"]: r
         for r in conn.execute(
-            """
+            f"""
             SELECT section,
                    COUNT(*)                         AS answered,
                    SUM(correct)                     AS correct,
                    COUNT(DISTINCT question_id)      AS seen
             FROM attempts
+            {cond}
             GROUP BY section
-            """
+            """,
+            params,
         ).fetchall()
     }
     # FRESH stats: each question's FIRST attempt only (first-exposure accuracy).
     fresh = {
         r["section"]: r
         for r in conn.execute(
-            """
+            f"""
             SELECT section, COUNT(*) AS fa, SUM(correct) AS fc FROM (
                 SELECT section, correct,
                        ROW_NUMBER() OVER (
                            PARTITION BY question_id ORDER BY answered_at, id
                        ) rn
                 FROM attempts
+                {cond}
             ) WHERE rn = 1
             GROUP BY section
-            """
+            """,
+            params,
         ).fetchall()
     }
 
