@@ -19,6 +19,37 @@ let qStartedAt = 0;
 let examStartedAt = 0;
 let timerHandle = null;
 
+// --- session resume (iOS Safari discards backgrounded tabs mid-quiz) ---
+// Every answer is already committed server-side via /api/attempt; this only
+// preserves the in-flight run (question set, position, results screen). The
+// payload never contains answers for unanswered questions.
+const STORE_KEY = `elmer.quiz.${MODE}.${SECTION || "all"}`;
+
+function saveState(nextIdx) {
+  try {
+    sessionStorage.setItem(STORE_KEY, JSON.stringify({
+      questions, nextIdx, answered, correctCount, results, examStartedAt,
+    }));
+  } catch (e) { /* storage unavailable — resume just won't be offered */ }
+}
+
+function clearState() {
+  try { sessionStorage.removeItem(STORE_KEY); } catch (e) {}
+}
+
+function loadState() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(STORE_KEY) || "null");
+    // nextIdx === length is a FINISHED run whose results screen was never seen
+    if (s && Array.isArray(s.questions) && s.questions.length &&
+        Number.isInteger(s.nextIdx) && s.nextIdx <= s.questions.length) {
+      return s;
+    }
+  } catch (e) {}
+  clearState();               // stale or malformed — drop it
+  return null;
+}
+
 async function api(path, body) {
   const res = await fetch(path, {
     method: "POST",
@@ -30,6 +61,15 @@ async function api(path, body) {
 }
 
 async function start() {
+  const saved = loadState();
+  if (saved) {
+    offerResume(saved);
+    return;
+  }
+  await startFresh();
+}
+
+async function startFresh() {
   try {
     const data = await api("/api/quiz", { mode: MODE, section: SECTION });
     questions = data.questions;
@@ -40,6 +80,55 @@ async function start() {
   el("loading").classList.add("hidden");
   el("card").classList.remove("hidden");
   examStartedAt = Date.now();
+  saveState(0);
+  if (MODE === "exam") startTimer();
+  render();
+}
+
+function offerResume(saved) {
+  const done = saved.nextIdx >= saved.questions.length;
+  const noun = MODE === "exam" ? "mock exam" : MODE;
+  const loading = el("loading");
+  loading.innerHTML = "";
+  const p = document.createElement("p");
+  p.textContent = done
+    ? `You finished a ${noun} here but never saw the results.`
+    : `You have an unfinished ${noun} here — ` +
+      `${saved.nextIdx} of ${saved.questions.length} answered.`;
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+  const resumeBtn = document.createElement("button");
+  resumeBtn.className = "btn btn-primary";
+  resumeBtn.textContent = done ? "See results" : "Resume";
+  resumeBtn.onclick = () => restore(saved);
+  const freshBtn = document.createElement("button");
+  freshBtn.className = "btn";
+  freshBtn.textContent = "Start over";
+  freshBtn.onclick = async () => {
+    clearState();
+    loading.textContent = "Loading questions…";
+    await startFresh();
+  };
+  actions.appendChild(resumeBtn);
+  actions.appendChild(freshBtn);
+  loading.appendChild(p);
+  loading.appendChild(actions);
+}
+
+function restore(saved) {
+  questions = saved.questions;
+  idx = saved.nextIdx;
+  answered = saved.answered || 0;
+  correctCount = saved.correctCount || 0;
+  results = saved.results || [];
+  examStartedAt = saved.examStartedAt || Date.now();
+  el("loading").classList.add("hidden");
+  el("loading").innerHTML = "";
+  if (idx >= questions.length) {   // finished run — go straight to the results screen
+    finish();
+    return;
+  }
+  el("card").classList.remove("hidden");
   if (MODE === "exam") startTimer();
   render();
 }
@@ -99,6 +188,7 @@ async function choose(chosen) {
   answered++;
   if (res.correct) correctCount++;
   results.push({ q, chosen, correct: res.correct, correct_index: res.correct_index });
+  saveState(idx + 1);   // answer is on the server; resume lands on the next question
 
   if (FEEDBACK_MODES.includes(MODE)) {
     // drill and review give immediate feedback; exam + diagnostic defer
@@ -182,6 +272,7 @@ async function finishDiagnostic() {
 
 function finish() {
   if (timerHandle) clearInterval(timerHandle);
+  clearState();
   el("card").classList.add("hidden");
   el("progress").textContent = "";
   if (MODE === "diagnostic") {

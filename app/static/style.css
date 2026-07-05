@@ -40,7 +40,7 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
   border: var(--border-w) solid var(--border); background: var(--surface); color: var(--ink);
   text-decoration: none; cursor: pointer; font-size: 0.95rem;
 }
-.btn:hover { border-color: var(--accent); }
+@media (hover: hover) { .btn:hover { border-color: var(--accent); } }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 
 /* dashboard — instrument panel (matches design mockup) */
@@ -75,7 +75,7 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .mrow { display: grid; grid-template-columns: minmax(150px, 1.4fr) 3fr auto auto;
   align-items: center; gap: var(--sp-4); padding: var(--sp-2) 0;
   border-bottom: var(--border-w) solid var(--border); text-decoration: none; color: var(--ink); }
-.mrow:hover { background: var(--surface-2); }
+@media (hover: hover) { .mrow:hover { background: var(--surface-2); } }
 .mrow-name { font-weight: 600; }
 .mrow-meter { width: 100%; }
 .mrow-pct { text-align: right; font-weight: 600; min-width: 3.6rem; white-space: nowrap; }
@@ -256,7 +256,7 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
   width: 1.8rem; height: 1.8rem; line-height: 1; font-size: 1.2rem; padding: 0;
   border: var(--border-w) solid var(--border); border-radius: var(--radius-sm);
   background: var(--surface-2); color: var(--muted); cursor: pointer; }
-.jr-close:hover { border-color: var(--accent); color: var(--ink); }
+@media (hover: hover) { .jr-close:hover { border-color: var(--accent); color: var(--ink); } }
 .jr-body { padding-right: 1.6rem; }
 .jr-entry h1 { font-size: 1.2rem; }
 .jr-entry h1:first-child { margin-top: 0; }
@@ -305,7 +305,7 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
   border: var(--border-w) solid var(--border); background: var(--surface-2); color: var(--ink);
   cursor: pointer; font-size: 0.98rem; font-family: inherit;
 }
-.option:hover:not(:disabled) { border-color: var(--accent); }
+@media (hover: hover) { .option:hover:not(:disabled) { border-color: var(--accent); } }
 .option:disabled { cursor: default; }
 .option .letter { display: inline-block; width: 1.5rem; font-weight: 700; color: var(--muted); font-family: var(--font-mono); }
 .option.correct { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
@@ -338,3 +338,29 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); }
 .exam-lines .line { font-size: 0.85rem; padding: 0.1rem 0.5rem; border-radius: 4px; font-family: var(--font-mono); }
 .exam-lines .pass { border: var(--border-w) solid var(--warn); color: var(--warn); }
 .exam-lines .honours { border: var(--border-w) solid var(--ok); color: var(--ok); }
+
+/* ---- touch & iOS hardening (appended last so it wins the cascade) ---- */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.section-head { flex-wrap: wrap; }       /* meter drops below the title on narrow screens */
+.smeter-row { flex-wrap: wrap; row-gap: var(--sp-1); column-gap: var(--sp-2); }
+.btn, .option, .jr-day { touch-action: manipulation; }  /* no double-tap-zoom delay */
+select, input, textarea { font-size: 1rem; }            /* <16px inputs trigger iOS zoom-on-focus */
+/* notch/home-bar safe areas (viewport-fit=cover in base.html) */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* Apple HIG minimum 44px tap targets — touch devices only, desktop stays trim */
+@media (pointer: coarse) {
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; }
+  .option { min-height: 44px; }
+  .jr-close { width: 2.6rem; height: 2.6rem; font-size: 1.35rem; }
+  .jr-day { min-height: 44px; }
+}
+
+/* "not ready yet" blockers — tappable disclosure (title tooltips don't exist on touch) */
+.blockers { margin-top: 2px; }
+.blockers summary { cursor: pointer; list-style-position: inside; }
+.blockers .blocker-list { margin: var(--sp-1) 0 0; padding-left: 1.1rem; text-align: left; }
+.blockers .blocker-list li { margin: 0.15rem 0; }

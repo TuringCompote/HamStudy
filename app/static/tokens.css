@@ -9,6 +9,9 @@
  * below to change the whole instrument glow in one line. (QUESTIONS open item.)
  */
 :root {
+  /* let native widgets (selects, scrollbars, iOS keyboard) follow the theme */
+  color-scheme: light dark;
+
   /* typography */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", "SF Mono",

@@ -68,3 +68,55 @@ Next step: user to answer §10 open questions (first vocab deck, calibration hos
 switcher placement, Morse speed, naming), then build step 1 (framework) behind a
 no-behavior-change commit.
 
+
+## 2026-07-04 — improvement round 1: verified fixes + iPhone baseline
+
+First session with Claude Fable 5. Ran a multi-agent review of the whole codebase
+(7 subsystem readers + synthesis), installed the `frontend-design` plugin for the
+upcoming visual redesign, then shipped the two cheapest phases of the plan.
+
+**Verified fixes:**
+- Formula trainer never mounted — `formula_trainer.html` lacked
+  `data-tool="formulatrainer"`, so the page shipped an empty div since v1.
+- Budget guard mispriced Sonnet: `usage.py` PRICING had no `claude-sonnet-4-6`
+  row, billing every live Sonnet call at Opus rates (~1.7× early stub cutover).
+- **Local-day semantics** (new `app/timeutil.py` + `config.TZ`, env
+  `HAMSTUDY_TZ`, default `America/Edmonton`): streaks (`coach.day_streak`), the
+  Leitner per-day collapse (`scheduler.compute_schedule`), and journal entry
+  dates now use the user's local day instead of UTC — an evening session no
+  longer splits/writes tomorrow. `attempts` stays UTC; deterministic (fixed zone
+  from config). One-time seam: streak/boxes recompute under local days on
+  upgrade. Added `tzdata` to requirements.
+- `/api/explain` now pins the cached-explanation read to the question row's
+  `bank_version` — a reworded question after a bank update can't serve its stale
+  explanation (live fallback covers until a re-batch).
+- Smoke test hardened: mastery assertions are delta-based (absolute counts broke
+  on any DB with real section-5 drills — including prod), and journal/
+  recommendation outputs now redirect to temp instead of leaking into `data/`.
+
+**iPhone baseline (daily driver is iPhone Safari over LAN/VPN HTTP):**
+- Home-screen app shell: apple-touch metas + generated S-meter icons
+  (`app/static/icons/`, pure-stdlib generator) + `/manifest.webmanifest` route
+  (APP_NAME from config). No service worker — plain-HTTP LAN is fine without.
+- `color-scheme: light dark` (native widgets follow the theme), safe-area
+  insets, 44px tap targets under `@media (pointer: coarse)`, hover rules gated
+  behind `@media (hover: hover)`, ≥16px form controls (kills iOS zoom-on-focus),
+  `:focus-visible` outline.
+- Hover-only info made touchable: readiness blockers are a `<details>`
+  disclosure; section page shows fresh counts inline.
+- **Quiz session resume** (`quiz.js` + sessionStorage): iOS discarding the tab
+  mid-quiz no longer loses the run — Resume/Start-over prompt, exam timer
+  restored, finished-but-unviewed runs reopen straight to the results screen.
+  Answers were always safe server-side; this recovers the in-flight session.
+
+Findings adversarially verified by refuter agents; the review caught the
+finished-run resume edge case before commit.
+
+**Deploy note:** this round changes Python (`config`, `timeutil`, `main`,
+engine) — deploy with `git pull && docker compose up -d --build`, not the
+UI-only pull+restart path (the bind-mounted `base.html` references the new
+`/manifest.webmanifest` route). Optionally set `HAMSTUDY_TZ` in `.env`.
+
+Next: journal/day-digest overhaul (needs the Sonnet pricing row above), then
+dig-deeper extensions (post-exam miss review, chosen-distractor-first), then the
+instrument-panel visual redesign with the frontend-design plugin.

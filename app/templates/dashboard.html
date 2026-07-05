@@ -25,7 +25,12 @@
     {% if summary.exam_ready %}
       <div class="ready-flag">✓ Book the exam</div>
     {% elif summary.blockers %}
-      <div class="muted small" title="{{ summary.blockers | join('; ') }}">not ready yet</div>
+      <details class="blockers small">
+        <summary class="muted">not ready yet</summary>
+        <ul class="blocker-list muted">
+          {% for b in summary.blockers %}<li>{{ b }}</li>{% endfor %}
+        </ul>
+      </details>
     {% endif %}
   </div>
 </header>

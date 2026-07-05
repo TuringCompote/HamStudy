@@ -4,6 +4,7 @@
 
 # Local Claude Code settings (personal, machine-specific)
 .claude/settings.local.json
+.claude/launch.json
 
 # Local data store (SQLite lives on NAS-backed volume in prod; never in git)
 data/*.db

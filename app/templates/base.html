@@ -2,8 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <!-- theme-color hexes mirror --bg in tokens.css (light/dark) — keep in sync -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f6f8">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1311">
+  <!-- iOS home-screen app (works over plain HTTP; no service worker needed) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="{{ APP_NAME }}">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <link rel="icon" href="/static/icons/icon-192.png" type="image/png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/static/tokens.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>

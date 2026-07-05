@@ -12,6 +12,7 @@
         <span class="smeter-fill tier-{{ stats.tier_css }}" style="width: {{ stats.fresh_pct }}%"></span>
       </span>
       <span class="smeter-val">{{ stats.fresh_pct }}%</span>
+      <span class="muted small mono">({{ stats.fresh_correct }}/{{ stats.fresh_answered }} fresh)</span>
       <span class="mrow-tier tier-text-{{ stats.tier_css }}">{{ stats.tier }}</span>
     </span>
   {% endif %}

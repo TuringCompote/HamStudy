@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -126,6 +126,28 @@ def api_diagnostic(req: DiagnosticRequest):
         conn.close()
 
 
+@app.get("/manifest.webmanifest")
+def manifest():
+    """Web app manifest (name from config — never hardcode APP_NAME). iOS uses
+    the apple-* metas in base.html for Add to Home Screen; this serves desktop
+    Chrome/Edge and keeps the colors/icons in one generated place."""
+    return JSONResponse(
+        {
+            "name": config.APP_NAME,
+            "short_name": config.APP_NAME,
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#0d1311",
+            "theme_color": "#0d1311",
+            "icons": [
+                {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            ],
+        },
+        media_type="application/manifest+json",
+    )
+
+
 @app.get("/formula-trainer", response_class=HTMLResponse)
 def formula_trainer(request: Request):
     return templates.TemplateResponse(
@@ -214,7 +236,14 @@ def api_explain(req: ExplainRequest):
         q = queries.get_question(conn, req.question_id, with_answer=True)
         if q is None:
             raise HTTPException(404, "unknown question id")
-        layers = explain_batch.get_explanation(conn, req.question_id)
+        # Pin the cache read to the question's CURRENT bank_version: after a bank
+        # update rewords a question, its stale explanation must not surface — the
+        # live fallback below covers the gap until a targeted re-batch.
+        bv_row = conn.execute(
+            "SELECT bank_version FROM questions WHERE id=?", (req.question_id,)
+        ).fetchone()
+        layers = explain_batch.get_explanation(
+            conn, req.question_id, bank_version=bv_row["bank_version"])
         if layers is not None:
             by_section = mastery.compute_section_mastery(conn)
             diagnostic.apply_diagnostic_tiers(conn, by_section)
