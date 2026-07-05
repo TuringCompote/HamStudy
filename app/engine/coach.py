@@ -3,24 +3,26 @@
 All pure functions over `attempts` (constitution §5) — no LLM, no randomness.
 This is the Phase-2/3 stand-in for what Phase 5 will produce as a full
 `recommendation.json` (and phrase via the AI layer). Same attempts in ⇒ same
-output. Streak is computed from attempt dates only (no wall-clock) so it stays
-reproducible.
+output. Streak is computed from attempt timestamps converted to the configured
+local zone (config.TZ) — no wall-clock — so it stays reproducible.
 """
 from __future__ import annotations
 
 from datetime import date
 
+from app import timeutil
 from app.engine.mastery import compute_section_mastery, HONOURS_BAR
 from app.engine import scheduler, readiness as readiness_mod
 
 
 def day_streak(conn) -> int:
-    """Consecutive calendar days (ending at the most recent attempt day) that
-    have at least one attempt. Date-only and attempt-derived → deterministic."""
-    rows = conn.execute(
-        "SELECT DISTINCT substr(answered_at, 1, 10) d FROM attempts ORDER BY d DESC"
-    ).fetchall()
-    days = [r["d"] for r in rows if r["d"]]
+    """Consecutive LOCAL calendar days (ending at the most recent attempt day)
+    that have at least one attempt. Attempt-derived + fixed TZ → deterministic."""
+    rows = conn.execute("SELECT answered_at FROM attempts").fetchall()
+    days = sorted(
+        {timeutil.local_day(r["answered_at"]) for r in rows if r["answered_at"]},
+        reverse=True,
+    )
     if not days:
         return 0
     streak = 1

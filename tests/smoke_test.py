@@ -26,6 +26,12 @@ os.environ["HAMSTUDY_DB"] = _tmp
 config.DB_PATH = config.Path(_tmp)  # override the already-imported value
 config.AI_PROVIDER = "stub"         # never spend real money during tests
 
+# Redirect the OTHER durable outputs too — journal .md files and
+# recommendation.json used to leak into the real data/ tree on every test run.
+_tmpdir = tempfile.mkdtemp(prefix="hamstudy_smoke_")
+config.JOURNAL_DIR = config.Path(_tmpdir) / "journal"
+config.RECOMMENDATION_PATH = config.Path(_tmpdir) / "recommendation.json"
+
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
@@ -62,6 +68,7 @@ def main() -> None:
         "SELECT correct_index FROM questions WHERE id=?", (qid,)
     ).fetchone()["correct_index"]
     before = conn.execute("SELECT COUNT(*) c FROM attempts").fetchone()["c"]
+    m_before = compute_section_mastery(conn)[5]   # source DB may already have s5 attempts
     r_ok = c.post("/api/attempt", json={
         "question_id": qid, "chosen_index": ci, "mode": "drill", "response_ms": 1500
     }).json()
@@ -74,10 +81,12 @@ def main() -> None:
     assert r_ok["correct_index"] == ci
     assert after - before == 2
 
-    # deterministic mastery reflects the two attempts (1/2 = 50%)
+    # deterministic mastery reflects the two new attempts (delta, not absolute —
+    # the source DB is a copy of real study data and may already have s5 attempts)
     m = compute_section_mastery(conn)[5]
     print("section 5 mastery:", m["mastery_pct"], "answered", m["answered"])
-    assert m["answered"] == 2 and m["correct"] == 1 and m["mastery_pct"] == 50.0
+    assert m["answered"] == m_before["answered"] + 2
+    assert m["correct"] == m_before["correct"] + 1
 
     # allocate_proportional sums correctly and tracks the bank distribution
     from app.quiz import allocate_proportional
@@ -177,10 +186,9 @@ def main() -> None:
     assert Path(jr["path"]).exists()
 
     # journal week view (embedded on the dashboard)
-    from datetime import date as _date
     assert "jr-days" in c.get("/").text and "journal.js" in c.get("/").text
     dts = c.get("/api/journal/dates").json()["dates"]
-    today = _date.today().isoformat()
+    today = jr["entry_date"]        # the date the write itself used (config.TZ local day)
     assert today in dts                                  # just wrote it above
     assert c.get(f"/api/journal/entry/{today}").json()["html"]
     assert c.get("/api/journal/entry/not-a-date").status_code == 400

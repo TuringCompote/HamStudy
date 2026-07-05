@@ -6,7 +6,9 @@ Before a call, `within_budget()` checks month-to-date spend against the ceiling
 core loop keeps working (constitution).
 
 Pricing per the claude-api reference (per token): Opus 4.8 $5/$25 per MTok,
-Haiku 4.5 $1/$5. Cache reads ≈0.1× input, cache writes ≈1.25× input.
+Sonnet 4.6 $3/$15, Haiku 4.5 $1/$5. Cache reads ≈0.1× input, cache writes
+≈1.25× input. Unknown models bill at Opus rates (conservative — trips the
+guard early rather than late), so add a row here when routing a new model.
 """
 from __future__ import annotations
 
@@ -17,6 +19,7 @@ from app import config
 # (input $/token, output $/token)
 PRICING = {
     "claude-opus-4-8": (5.0e-6, 25.0e-6),
+    "claude-sonnet-4-6": (3.0e-6, 15.0e-6),
     "claude-haiku-4-5": (1.0e-6, 5.0e-6),
 }
 CACHE_READ_MULT = 0.10

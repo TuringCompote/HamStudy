@@ -24,6 +24,37 @@ APP_NAME = os.environ.get("APP_NAME", "Elmer")
 # SQLite store. Prod points HAMSTUDY_DB at the NAS-backed volume; default is local.
 DB_PATH = Path(os.environ.get("HAMSTUDY_DB", ROOT / "data" / "hamstudy.db"))
 
+# The user's local timezone (IANA name). `attempts` timestamps stay UTC, but a
+# "study day" — streaks, the scheduler's one-outcome-per-day collapse, journal
+# dates — is a LOCAL day; on UTC days an evening session lands on tomorrow.
+# Fixed via config (not the host clock's zone) so the engine stays deterministic:
+# same attempts + same config ⇒ same output. Requires tzdata (in requirements).
+_TZ_DEFAULT = "America/Edmonton"
+
+
+def _load_tz():
+    name = os.environ.get("HAMSTUDY_TZ", _TZ_DEFAULT)
+    try:
+        from zoneinfo import ZoneInfo
+    except Exception:                  # no zoneinfo at all — behave as before (UTC days)
+        from datetime import timezone as _timezone
+        return _timezone.utc
+    try:
+        return ZoneInfo(name)
+    except Exception:
+        # a mistyped HAMSTUDY_TZ must not silently revert to UTC-day semantics
+        import sys
+        print(f"[config] unknown HAMSTUDY_TZ={name!r} — using {_TZ_DEFAULT}",
+              file=sys.stderr)
+        try:
+            return ZoneInfo(_TZ_DEFAULT)
+        except Exception:              # tz database missing entirely
+            from datetime import timezone as _timezone
+            return _timezone.utc
+
+
+TZ = _load_tz()
+
 # Downloaded source material (git-ignored; re-fetchable).
 REFERENCES_DIR = Path(os.environ.get("HAMSTUDY_REFERENCES", ROOT / "references"))
 BANK_PDF = Path(

@@ -7,15 +7,16 @@ Indexed in the `journal` table. Dated YYYY-MM-DD; re-running the same day rewrit
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
-from app import config
+from app import config, timeutil
 from app.engine import recommend, mastery, diagnostic
 from app.coaching.ai_provider import get_provider
 
 
 def write_journal(conn, entry_date: str | None = None) -> dict:
-    entry_date = entry_date or date.today().isoformat()
+    # local day (config.TZ), not container-UTC — an evening entry is still "today"
+    entry_date = entry_date or timeutil.today_local().isoformat()
     rec = recommend.build_recommendation(conn)
     by_section = mastery.compute_section_mastery(conn)
     diagnostic.apply_diagnostic_tiers(conn, by_section)

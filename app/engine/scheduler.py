@@ -1,9 +1,10 @@
 """Deterministic spaced-repetition scheduler (constitution §5).
 
 Leitner-style boxes computed purely from the `attempts` log:
-  - Attempts are collapsed to ONE review outcome per calendar day (the last
-    attempt that day) so drilling a question repeatedly in one session can't
-    inflate its box.
+  - Attempts are collapsed to ONE review outcome per LOCAL calendar day
+    (config.TZ; the last attempt that day) so drilling a question repeatedly
+    in one session can't inflate its box — and an evening session doesn't
+    split across two UTC days.
   - Each review day: correct ⇒ promote one box (capped), wrong ⇒ reset to box 1.
   - A box maps to an interval (days); `due_date = last_review_day + interval`.
 
@@ -15,6 +16,8 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from app import timeutil
+
 MAX_BOX = 6
 # box -> interval in days. Box 1 (just lapsed / new-wrong) is due immediately.
 INTERVALS = {1: 0, 2: 1, 3: 3, 4: 7, 5: 16, 6: 35}
@@ -22,7 +25,7 @@ INTERVALS = {1: 0, 2: 1, 3: 3, 4: 7, 5: 16, 6: 35}
 
 def _attempt_rows(conn):
     return conn.execute(
-        "SELECT question_id, substr(answered_at,1,10) AS day, correct, answered_at "
+        "SELECT question_id, correct, answered_at "
         "FROM attempts ORDER BY question_id, answered_at, id"
     ).fetchall()
 
@@ -39,10 +42,11 @@ def compute_schedule(conn) -> dict[str, dict]:
 
     schedule: dict[str, dict] = {}
     for qid, rows in by_q.items():
-        # last attempt of each day = that day's review outcome (rows already ordered)
+        # last attempt of each LOCAL day = that day's review outcome (rows already
+        # ordered by timestamp; UTC order == local order for a fixed zone)
         day_outcome: dict[str, int] = {}
         for r in rows:
-            day_outcome[r["day"]] = r["correct"]
+            day_outcome[timeutil.local_day(r["answered_at"])] = r["correct"]
 
         box = 1
         reviews = 0
