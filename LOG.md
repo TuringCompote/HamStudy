@@ -120,3 +120,39 @@ UI-only pull+restart path (the bind-mounted `base.html` references the new
 Next: journal/day-digest overhaul (needs the Sonnet pricing row above), then
 dig-deeper extensions (post-exam miss review, chosen-distractor-first), then the
 instrument-panel visual redesign with the frontend-design plugin.
+
+## 2026-07-05 — improvement round 2: journal that knows your day + post-exam miss review
+
+**Journal / day-digest overhaul (the "AI summary is crappy" fix).** Root cause from
+the review: `narrate()` never saw the day's work — only the forward-looking plan as
+raw JSON, "2-3 sentences" hardcoded, on Haiku. Now:
+- New deterministic `app/engine/day_digest.py`: everything that happened on a LOCAL
+  day — totals, per-mode results, per-section results with start-of-day → now
+  fresh-accuracy deltas (via a new `before=` cutoff on `compute_section_mastery`),
+  the actual missed questions (stem, chosen vs correct, repeat count), and the
+  fast-wrong signal. Pure over `attempts` + config.TZ.
+- `narrate(digest=...)` across the provider interface; `prompts/narrate.md` rewritten
+  (voice, 80–150 words, miss-theme naming, no invented numbers — all Console-tunable);
+  narrate routed to **Sonnet** (~$0.01/entry; Haiku still via `HAMSTUDY_MODEL_NARRATE`).
+- Journal body now: narrative → "## Today" facts → "### Missed today" (question texts,
+  chose → correct) → per-section table. The stub fallback writes an honest digest
+  summary too, so no-key/over-budget entries are still informative.
+- **Auto-write:** finishing any quiz fires a background `/api/journal` rewrite —
+  the strip stays current without tapping "Write today's". Write button + diagnose
+  button now surface real errors (res.ok checks).
+- 2 narrate golden cases added to `docs/ai-evals/cases.jsonl`; README updated
+  (narrate now needs Sonnet-grade reasoning — grade for miss themes + no fabrication).
+
+**Post-exam miss review (dig-deeper extension).** The mock exam results screen now
+lists every miss — stem, your answer vs correct — each with the full Explain flow.
+Previously misses only resurfaced days later via the review queue. And explanations
+are now personalized: the distractor *you picked* is promoted to the top of "why the
+others are wrong", tagged "you picked this →" (matches batch layers keyed by option
+text or bare letter).
+
+Verified: smoke test green (now covers digest determinism + journal body); stub
+journal, exam miss review, and the you-picked-this marker all exercised in the
+isolated preview. Deploy: Python changed ⇒ `git pull && docker compose up -d --build`.
+
+Next: instrument-panel visual redesign (fresh session so the frontend-design plugin
+loads), then tools overhaul / data-safety / bank freshness per the round-1 plan.

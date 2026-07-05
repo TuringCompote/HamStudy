@@ -90,6 +90,7 @@ document.getElementById("diag-btn").addEventListener("click", async function () 
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ section: Number(this.dataset.section) }),
     });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
     const j = await r.json();
     out.textContent = j.text + (j.degraded ? "  (AI off — set an API key for a tailored diagnosis)" : "");
   } catch (e) {

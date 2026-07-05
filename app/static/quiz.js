@@ -220,7 +220,8 @@ function showFeedback(chosen, res) {
     explainBtn.textContent = "Explaining…";
     try {
       const r = await api("/api/explain", { question_id: q.id, chosen_index: chosen });
-      renderExplanation(out, r);
+      renderExplanation(out, r, res.correct ? null : q.options[chosen],
+                        res.correct ? null : OPTION_LETTERS[chosen]);
     } catch (e) {
       out.textContent = "Could not get an explanation: " + e.message;
     }
@@ -240,6 +241,12 @@ el("next").onclick = () => {
 
 function tierCss(t) {
   return ({ "test-out": "testout", light: "light", standard: "standard", deep: "deep" })[t] || "none";
+}
+
+function refreshJournal() {
+  // fire-and-forget: rewrite today's journal entry now that the day's log grew
+  // (server-side it's budget-guarded and same-day idempotent)
+  if (answered > 0) fetch("/api/journal", { method: "POST" }).catch(() => {});
 }
 
 async function finishDiagnostic() {
@@ -273,6 +280,7 @@ async function finishDiagnostic() {
 function finish() {
   if (timerHandle) clearInterval(timerHandle);
   clearState();
+  refreshJournal();
   el("card").classList.add("hidden");
   el("progress").textContent = "";
   if (MODE === "diagnostic") {
@@ -329,7 +337,49 @@ function finish() {
       <a class="btn btn-primary" href="/">Back to dashboard</a>
       <a class="btn" href="/quiz?mode=${MODE}${SECTION ? "&section=" + SECTION : ""}">Again</a>
     </div>`;
+  if (MODE === "exam") renderMissReview(el("results"));
   el("results").classList.remove("hidden");
+}
+
+// Post-exam miss review: exam mode defers feedback, so without this the misses
+// only resurface days later via the review queue — surface them (with the full
+// dig-deeper explanation flow) right on the results screen.
+function renderMissReview(container) {
+  const misses = results.filter((r) => !r.correct);
+  if (!misses.length) return;
+  const wrap = document.createElement("div");
+  wrap.className = "miss-review";
+  wrap.innerHTML = `<h3>Review your ${misses.length} miss${misses.length > 1 ? "es" : ""}</h3>`;
+  misses.forEach((r) => {
+    const item = document.createElement("div");
+    item.className = "miss-item";
+    item.innerHTML =
+      `<p class="miss-stem">${escapeHtml(r.q.text)} <span class="muted small mono">${escapeHtml(r.q.id)}</span></p>` +
+      `<p class="small miss-answers">` +
+      `<span class="miss-yours">✗ ${OPTION_LETTERS[r.chosen]}. ${escapeHtml(r.q.options[r.chosen])}</span><br>` +
+      `<span class="miss-right">✓ ${OPTION_LETTERS[r.correct_index]}. ${escapeHtml(r.q.options[r.correct_index])}</span></p>`;
+    const btn = document.createElement("button");
+    btn.className = "btn explain-btn";
+    btn.textContent = "Explain ▾";
+    const out = document.createElement("div");
+    out.className = "explain-out muted small hidden";
+    btn.onclick = async () => {
+      btn.disabled = true;
+      btn.textContent = "Explaining…";
+      try {
+        const resp = await api("/api/explain", { question_id: r.q.id, chosen_index: r.chosen });
+        renderExplanation(out, resp, r.q.options[r.chosen], OPTION_LETTERS[r.chosen]);
+      } catch (e) {
+        out.textContent = "Could not get an explanation: " + e.message;
+      }
+      out.classList.remove("hidden");
+      btn.classList.add("hidden");
+    };
+    item.appendChild(btn);
+    item.appendChild(out);
+    wrap.appendChild(item);
+  });
+  container.appendChild(wrap);
 }
 
 function fmtTime(s) {
@@ -344,7 +394,11 @@ function escapeHtml(s) {
 }
 
 // Render a structured (batch) explanation with adaptive reveal, or a live text blob.
-function renderExplanation(container, r) {
+// chosenText/chosenLetter (optional): the option the user picked — its distractor
+// entry is promoted to the top and tagged, so "why was *my* answer tempting" reads
+// first. Batch layers key distractors by full option text OR bare letter ("A"),
+// so both are matched.
+function renderExplanation(container, r, chosenText, chosenLetter) {
   container.innerHTML = "";
   if (r.source !== "batch" || !r.layers) {
     container.textContent =
@@ -362,8 +416,23 @@ function renderExplanation(container, r) {
   };
   layer("core", "", escapeHtml(L.core));
   if (L.distractors && L.distractors.length) {
-    const items = L.distractors
-      .map((x) => `<li><b>${escapeHtml(x.option)}</b> — ${escapeHtml(x.why_wrong)} <em>(${escapeHtml(x.why_tempting)})</em></li>`)
+    let ds = L.distractors.slice();
+    let yoursIdx = -1;
+    if (chosenText || chosenLetter) {
+      const norm = (s) => (s || "").trim().toLowerCase();
+      // bare-letter form: "A", "A.", "(A)" — but never a full text like "A kilohm"
+      const isLetterOnly = (s) =>
+        chosenLetter && norm(s).replace(/[().\s]/g, "") === chosenLetter.toLowerCase();
+      const i = ds.findIndex(
+        (x) => norm(x.option) === norm(chosenText) || isLetterOnly(x.option)
+      );
+      if (i > 0) ds.unshift(ds.splice(i, 1)[0]);
+      if (i >= 0) yoursIdx = 0;
+    }
+    const items = ds
+      .map((x, i) =>
+        `<li>${i === yoursIdx ? '<span class="miss-yours">you picked this → </span>' : ""}` +
+        `<b>${escapeHtml(x.option)}</b> — ${escapeHtml(x.why_wrong)} <em>(${escapeHtml(x.why_tempting)})</em></li>`)
       .join("");
     layer("distractors", "Why the others are wrong", `<ul class="exp-list">${items}</ul>`);
   }

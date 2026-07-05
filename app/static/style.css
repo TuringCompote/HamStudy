@@ -359,6 +359,17 @@ body {
   .jr-day { min-height: 44px; }
 }
 
+/* post-exam miss review (results screen) */
+.miss-review { margin-top: var(--sp-5); border-top: var(--border-w) solid var(--border);
+  padding-top: var(--sp-4); }
+.miss-review h3 { margin: 0 0 var(--sp-3); }
+.miss-item { padding: var(--sp-3) 0; border-bottom: var(--border-w) solid var(--border); }
+.miss-item:last-child { border-bottom: none; }
+.miss-stem { margin: 0 0 var(--sp-2); font-weight: 600; }
+.miss-answers { margin: 0 0 var(--sp-2); line-height: 1.6; }
+.miss-yours { color: var(--bad); }
+.miss-right { color: var(--ok); }
+
 /* "not ready yet" blockers — tappable disclosure (title tooltips don't exist on touch) */
 .blockers { margin-top: 2px; }
 .blockers summary { cursor: pointer; list-style-position: inside; }
