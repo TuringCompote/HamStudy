@@ -37,7 +37,7 @@ in `app/static/tokens.css`; every SVG tool themes from them.
 - **Readiness = ≥80% fresh-question accuracy in every section AND every subsection probed.**
   Both required before "book the exam."
 - **"Fresh" = COLD RECALL, not first-exposure-only.** An attempt is fresh when it's a
-  question's first ever OR it lands ≥`config.FRESH_COOLDOWN_DAYS` (default 3, env
+  question's first ever OR it lands ≥`config.FRESH_COOLDOWN_DAYS` (default 2, env
   `HAMSTUDY_FRESH_COOLDOWN_DAYS`) after that question's previous attempt; a section scores
   over each question's **most recent** cold attempt. Defined once in `mastery.cold_sql()`
   — mastery, tiers, readiness coverage, trend and drill selection all read through it, so

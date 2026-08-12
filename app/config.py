@@ -61,7 +61,7 @@ TZ = _load_tz()
 # re-answering something you drilled minutes ago tests recognition, not recall.
 # 0 disables the cooldown, which reverts fresh accuracy to first-exposure-only
 # (the old behavior: permanently frozen once the bank has been seen).
-FRESH_COOLDOWN_DAYS = float(os.environ.get("HAMSTUDY_FRESH_COOLDOWN_DAYS", "3"))
+FRESH_COOLDOWN_DAYS = float(os.environ.get("HAMSTUDY_FRESH_COOLDOWN_DAYS", "2"))
 
 # Downloaded source material (git-ignored; re-fetchable).
 REFERENCES_DIR = Path(os.environ.get("HAMSTUDY_REFERENCES", ROOT / "references"))

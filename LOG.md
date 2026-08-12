@@ -229,7 +229,7 @@ session" named a different weakest section than the S-meters showed (visible in 
 report: session said feedlines, meters said propagation).
 
 **Fix — "fresh" now means COLD RECALL.** An attempt is cold when it's a question's
-first ever *or* it lands ≥`config.FRESH_COOLDOWN_DAYS` (default 3, env-overridable)
+first ever *or* it lands ≥`config.FRESH_COOLDOWN_DAYS` (default 2, env-overridable)
 after that question's previous attempt; a section scores over each question's **most
 recent** cold attempt. That keeps the original intent — a re-answer minutes later
 tests recognition, not recall — while letting the number recover as questions are
@@ -264,7 +264,10 @@ asserted `fresh_pct` *exists*, never that it can move.
 `analysis.py`, `adaptive.py`, `coach.py`) ⇒ `git pull && docker compose up -d --build`
 (not the UI-only pull+restart path).
 
-**Next step for the user:** the cooldown is a knob, not a constant —
+**Cooldown = 2 days** (user's call). Rationale: with a daily study habit and a fully
+seen bank, 2 days is the shortest window that still refuses to credit same-session
+and next-morning cramming, while letting roughly half the week's drilling land as
+real cold-recall evidence. It is a knob, not a constant —
 `HAMSTUDY_FRESH_COOLDOWN_DAYS=7` makes readiness a stricter (slower-moving) signal,
-`=1` makes daily drilling count immediately. Worth revisiting once there's a few
-weeks of post-fix data.
+`=1` makes daily drilling count immediately, `=0` reverts to first-exposure-only.
+Worth revisiting once there's a few weeks of post-fix data.
