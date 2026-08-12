@@ -5,11 +5,14 @@
   2. every subsection has been probed with a fresh question (coverage), so a
      strong section is verified, not assumed.
 
-Pure over `attempts` + `questions`. Fresh = a question's first-ever attempt.
+Pure over `attempts` + `questions`. Fresh = a COLD attempt (first exposure, or
+after the cooldown) — see `mastery.py` for the definition.
 """
 from __future__ import annotations
 
-from app.engine.mastery import compute_section_mastery, HONOURS_BAR
+from app.engine.mastery import (
+    compute_section_mastery, cold_params, cold_sql, HONOURS_BAR,
+)
 
 
 def coverage(conn) -> dict:
@@ -26,16 +29,11 @@ def coverage(conn) -> dict:
 
     covered = {}
     for r in conn.execute(
-        """
-        SELECT section, COUNT(DISTINCT subsection) n FROM (
-            SELECT section, subsection,
-                   ROW_NUMBER() OVER (
-                       PARTITION BY question_id ORDER BY answered_at, id
-                   ) rn
-            FROM attempts
-        ) WHERE rn = 1
-        GROUP BY section
-        """
+        cold_sql(
+            "SELECT section, COUNT(DISTINCT subsection) n "
+            "FROM cold WHERE cold_rn = 1 GROUP BY section"
+        ),
+        cold_params(),
     ).fetchall():
         covered[r["section"]] = r["n"]
 

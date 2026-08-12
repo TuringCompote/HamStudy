@@ -36,6 +36,14 @@ in `app/static/tokens.css`; every SVG tool themes from them.
 ## Key decisions in force
 - **Readiness = ≥80% fresh-question accuracy in every section AND every subsection probed.**
   Both required before "book the exam."
+- **"Fresh" = COLD RECALL, not first-exposure-only.** An attempt is fresh when it's a
+  question's first ever OR it lands ≥`config.FRESH_COOLDOWN_DAYS` (default 3, env
+  `HAMSTUDY_FRESH_COOLDOWN_DAYS`) after that question's previous attempt; a section scores
+  over each question's **most recent** cold attempt. Defined once in `mastery.cold_sql()`
+  — mastery, tiers, readiness coverage, trend and drill selection all read through it, so
+  they can't drift. Still deterministic: the cooldown compares two timestamps already in
+  the log, never the wall clock. (v1 used first-attempt-only, which froze every number
+  permanently once the bank had been seen — Honours became unreachable by construction.)
 - **Models:** the one-time explanation **batch ran on Opus** (best quality, cache-first DB
   reads forever). **Live calls route off Opus** (user is credit-limited): Sonnet for all
   four call types — narrate moved off Haiku when the journal switched to reasoning over
@@ -61,6 +69,10 @@ in `app/static/tokens.css`; every SVG tool themes from them.
   re-export the seed. Trim the RIC grounding / chunk the batch first to control cost +
   rate limits; prefer Opus only if credits allow.
 - Always run `python tests/smoke_test.py` (forces the stub — never spends) before committing.
+  Also run `python tests/engine_test.py` — self-contained (synthetic bank in a temp DB, no
+  `data/` needed) and it pins the engine invariants the smoke test can't see: fresh accuracy
+  recovers after the cooldown but never rewards cramming, drills rotate through a section,
+  and the coach's focus matches the weakest dashboard row.
 
 ## Conventions
 - Spec-driven, small committed steps. Append a dated entry to `LOG.md` each session.

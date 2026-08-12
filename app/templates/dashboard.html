@@ -18,7 +18,10 @@
     </div>
   </div>
   <div class="readiness">
-    <div class="muted small">Exam readiness <span class="muted">(fresh-Q)</span></div>
+    <div class="muted small" title="Cold-recall accuracy: each question's most recent
+answer given at least {{ UI_CONFIG.fresh_cooldown_days }} day(s) after the previous
+one. Re-answering something you just drilled doesn't count.">Exam readiness <span
+      class="muted">(fresh-Q)</span></div>
     <div class="readiness-val mono">
       {{ summary.readiness_pct if summary.readiness_pct is not none else "—" }}{% if summary.readiness_pct is not none %}%{% endif %}
     </div>
@@ -91,7 +94,8 @@
   <a class="mrow" href="/section/{{ s.section }}">
     <span class="mrow-name">{{ s.short }}{% if s.fast_wrong %}<span class="lamp lamp-warn"
       title="{{ s.fast_wrong }} confident-but-wrong (answered fast, missed) — likely misconception"></span>{% endif %}</span>
-    <span class="smeter mrow-meter" title="fresh: {{ s.fresh_correct }}/{{ s.fresh_answered }} correct">
+    <span class="smeter mrow-meter" title="cold recall: {{ s.fresh_correct }}/{{ s.fresh_answered }} correct
+(repeats inside {{ UI_CONFIG.fresh_cooldown_days }} day(s) don't count)">
       {% if s.fresh_pct is not none %}
       <span class="smeter-fill tier-{{ s.tier_css }}" style="width: {{ s.fresh_pct }}%"></span>
       {% endif %}
