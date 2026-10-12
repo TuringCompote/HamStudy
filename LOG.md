@@ -225,6 +225,16 @@ parser ingested it unchanged once the id regex took the prefix. `ingest`/`valida
 `meta.expected_total`. `fetch_sources` fetches both banks; `install.sh` builds both
 DBs; `backup.py` snapshots both.
 
+**Parse verified exact against ISED's own data.** The user supplied ISED's delimited
+bank (`amat_adv_quest.zip` → `amat_adv_quest_delim.txt`; correct answer first). All
+549 stems, option sets and answer keys matched; the only diff was a parser artifact —
+words hyphenated across a PDF line break came out as "left- hand" (32 Advanced /
+34 Basic questions). `ingest._join` now re-joins those; both banks re-ingest clean
+and the Advanced parse is a character-for-character match. `validate` gained an
+exact cross-check against the delimited file whenever it is present
+(`fetch_sources` now pulls both zips). Re-ingesting Basic is cosmetic-only (same
+`bank_version`, attempts/explanations untouched).
+
 **Explanations — written in-session, no API spend.** 549 structured explanations
 (`seed/explanations_advanced.jsonl`, same schema as the Basic seed plus a new
 `worked_example` layer; median ~530 words/question vs ~300 for the Opus batch;

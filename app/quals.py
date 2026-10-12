@@ -41,6 +41,7 @@ class Qual:
     bank_url: str
     seed_filename: str             # seed/<file>.jsonl — committed explanations
     lessons_dirname: str           # app/content/<dir>/section{n}.md
+    delim_filename: str = ""       # references/_extracted/<file>: ISED's delimited bank
     tools: dict[int, list[str]] = field(default_factory=dict)      # section -> tool ids
     grounding: dict[int, list[str]] = field(default_factory=dict)  # section -> corpus files
     tagline: str = ""
@@ -84,6 +85,10 @@ class Qual:
         return config.BANK_PDF_ADVANCED
 
     @property
+    def delim_path(self) -> Path:
+        return config.REFERENCES_DIR / "_extracted" / self.delim_filename
+
+    @property
     def seed_path(self) -> Path:
         return config.ROOT / "seed" / self.seed_filename
 
@@ -122,6 +127,7 @@ BASIC = Qual(
     honours=True,
     bank_filename="amateur_basic_questions_en.pdf",
     bank_url="https://apc-cap.ic.gc.ca/datafiles/amateur_basic_questions_en.pdf",
+    delim_filename="amat_basic_quest_delim.txt",
     seed_filename="explanations.jsonl",
     lessons_dirname="sections",
     tools={
@@ -165,6 +171,7 @@ ADVANCED = Qual(
     honours=False,
     bank_filename="amateur_advanced_questions_en.pdf",
     bank_url="https://apc-cap.ic.gc.ca/datafiles/amateur_advanced_questions_en.pdf",
+    delim_filename="amat_adv_quest_delim.txt",
     seed_filename="explanations_advanced.jsonl",
     lessons_dirname="sections_advanced",
     tools={

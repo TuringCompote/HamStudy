@@ -99,6 +99,25 @@ def extract_bank_version(pdf) -> str:
     return f"{year:04d}-{month:02d}-{day:02d}"
 
 
+def _join(lines: list[str]) -> str:
+    """Join visual lines into one string. A word hyphenated across a line break
+    ("left-" / "hand rule", "12.21-" / "MHz") is re-joined without a space;
+    everything else gets one. Verified exact against ISED's delimited data file
+    for the whole Advanced bank."""
+    out = ""
+    for ln in lines:
+        ln = ln.strip()
+        if not ln:
+            continue
+        if out and re.search(r"\w-$", out) and ln[:1].isalnum():   # "Peak-" + "Envelope"
+            out += ln
+        elif out:
+            out += " " + ln
+        else:
+            out = ln
+    return out
+
+
 def _parse_block(qid: str, ans: str, body: list[str]) -> dict:
     """Split a question block's body lines into stem + 4 options.
 
@@ -126,12 +145,11 @@ def _parse_block(qid: str, ans: str, body: list[str]) -> dict:
     if None in (a, b, c):
         raise ValueError(f"{qid}: could not locate A/B/C/D option markers")
 
-    stem = " ".join(ls[:a]).strip()
+    stem = _join(ls[:a])
     options = []
     for start, end in [(a, b), (b, c), (c, d), (d, len(ls))]:
         head = _OPT_RE.match(ls[start]).group(2)
-        tail = " ".join(ls[start + 1:end])
-        options.append((head + " " + tail).strip())
+        options.append(_join([head] + ls[start + 1:end]))
 
     if not stem:
         raise ValueError(f"{qid}: empty stem")

@@ -25,6 +25,41 @@ from app.db.init_db import connect
 EXPECTED_TOTAL = 984          # PHASE0-FINDINGS: current Basic bank size (quals.BASIC)
 
 
+def crosscheck_delimited(rows, q) -> list[str]:
+    """Exact cross-check of the PDF parse against ISED's own delimited data file
+    (references/_extracted/<delim_filename>, from fetch_sources), when present:
+    every stem, the full option set and the keyed answer must match character for
+    character (the data file drops ';' — its delimiter — so that's normalised).
+    Skipped silently if the file isn't there."""
+    import csv
+    path = q.delim_path
+    if not q.delim_filename or not path.exists():
+        print("delimited x-check   : (file not present — skipped)")
+        return []
+    with open(path, encoding="utf-8", newline="") as f:
+        recs = [r for r in csv.reader(f, delimiter=";")][1:]
+    norm = lambda s: re.sub(r"\s+", " ", s.replace(";", " ")).strip()   # noqa: E731
+    by_id = {r["id"]: r for r in rows}
+    out = []
+    for r in recs:
+        qid = r[0].strip()
+        d = by_id.get(qid)
+        if d is None:
+            out.append(f"{qid}: in ISED data file but not ingested"); continue
+        opts = json.loads(d["options"])
+        if norm(r[1]) != norm(d["text"]):
+            out.append(f"{qid}: stem differs from ISED data file")
+        if sorted(map(norm, r[2:6])) != sorted(map(norm, opts)):
+            out.append(f"{qid}: option set differs from ISED data file")
+        elif norm(r[2]) != norm(opts[d["correct_index"]]):
+            out.append(f"{qid}: answer key differs from ISED data file")
+    extra = sorted(set(by_id) - {r[0].strip() for r in recs})
+    if extra:
+        out.append(f"{len(extra)} ingested id(s) absent from ISED data file: {extra[:5]}")
+    print(f"delimited x-check   : {len(recs)} records, {len(out)} mismatch(es)")
+    return out
+
+
 def validate(db_path=None) -> bool:
     q = quals.current()
     _id_re = re.compile(rf"^{q.id_prefix}-(\d{{3}})-(\d{{3}})-(\d{{3}})$")
@@ -104,6 +139,8 @@ def validate(db_path=None) -> bool:
 
     if len(bank_versions) > 1:
         failures.append(f"mixed bank_version values: {sorted(bank_versions)}")
+
+    failures += crosscheck_delimited(rows, q)
 
     if failures:
         print(f"\nFAILED ({len(failures)} issue(s)):")
