@@ -44,6 +44,9 @@ LAYER_SCHEMA = {
         "link": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "mnemonic": {"type": "string"},
         "edge_cases": {"type": "string"},
+        # Advanced-bank explanations add a worked numeric/derivation example
+        # (quiz.js renders it as its own layer when present).
+        "worked_example": {"type": "string"},
     },
     "required": ["core", "distractors", "concept", "misconception", "link"],
     "additionalProperties": False,
@@ -96,8 +99,9 @@ DEPTH_LAYERS = {
     "test-out": ["core"],
     "light": ["core", "misconception"],
     "standard": ["core", "distractors", "misconception"],
-    "deep": ["core", "distractors", "concept", "misconception", "link", "mnemonic", "edge_cases"],
-    None: ["core", "distractors", "concept", "misconception"],  # unrated → generous default
+    "deep": ["core", "distractors", "concept", "worked_example", "misconception", "link",
+             "mnemonic", "edge_cases"],
+    None: ["core", "distractors", "concept", "worked_example", "misconception"],  # unrated → generous
 }
 
 
@@ -266,11 +270,17 @@ if __name__ == "__main__":
     import argparse
     from app.db.init_db import connect
 
+    from app import quals
+
     ap = argparse.ArgumentParser(description="Explanation batch seed export/import.")
+    quals.add_cli_arg(ap)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    pe = sub.add_parser("export"); pe.add_argument("--path", required=True, type=Path)
-    pi = sub.add_parser("import"); pi.add_argument("--path", required=True, type=Path)
+    pe = sub.add_parser("export"); pe.add_argument("--path", type=Path)
+    pi = sub.add_parser("import"); pi.add_argument("--path", type=Path)
     args = ap.parse_args()
+    quals.activate(args.qual)
+    # default: the qualification's committed seed (seed/explanations[_advanced].jsonl)
+    args.path = args.path or quals.current().seed_path
     conn = connect()
     if args.cmd == "export":
         print(f"exported {export_explanations(conn, args.path)} explanations -> {args.path}")

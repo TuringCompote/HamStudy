@@ -104,7 +104,9 @@ class AnthropicProvider(AIProvider):
         letters = ["A", "B", "C", "D"]
         opts = question.get("options", [])
         ci = question.get("correct_index")
-        lines = [f"Question: {question.get('text','')}", "Options:"]
+        from app import quals
+        lines = [f"Qualification: {quals.current().label}",
+                 f"Question: {question.get('text','')}", "Options:"]
         for i, o in enumerate(opts):
             lines.append(f"  {letters[i]}. {o}")
         if ci is not None:
@@ -119,7 +121,9 @@ class AnthropicProvider(AIProvider):
         )
 
     def diagnose(self, *, section_name: str, miss_summary: str, grounding: str = "") -> AIResult:
-        user = (f"Section: {section_name}\nThe learner's recurring misses: {miss_summary}\n"
+        from app import quals
+        user = (f"Qualification: {quals.current().label}\nSection: {section_name}\n"
+                f"The learner's recurring misses: {miss_summary}\n"
                 "Diagnose the likely underlying misconception and the single most useful "
                 "thing to focus on next. 2-4 sentences.")
         return self._call(

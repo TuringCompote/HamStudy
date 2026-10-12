@@ -9,8 +9,9 @@ services:
     ports:
       - "${BIND_IP:-0.0.0.0}:${PORT:-8000}:8000"
     volumes:
-      - ./data:/app/data      # SQLite (questions + the 984 explanations + attempts),
-                              # recommendation.json, journal/ — persist on the NAS-backed path
+      - ./data:/app/data      # SQLite — one store per qualification (hamstudy.db +
+                              # hamstudy_advanced.db: questions, explanations, attempts),
+                              # recommendation*.json, journal*/ — persist on the NAS-backed path
       # UI served from the repo working tree so `git pull` applies CSS/JS/template
       # tweaks without an image rebuild (static = live; templates = after a restart).
       - ./app/static:/app/app/static:ro

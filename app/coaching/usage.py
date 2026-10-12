@@ -62,7 +62,33 @@ def month_to_date_cost(conn, month_prefix: str | None = None) -> float:
     return row["c"] or 0.0
 
 
+def month_to_date_cost_all(conn) -> float:
+    """Month-to-date spend across EVERY qualification's store. Each qualification
+    has its own SQLite file (so Basic/Advanced history never mixes), but the
+    monthly ceiling is one wallet — so the guard sums all of them. `conn` is the
+    active store; the others are opened read-only if their file exists."""
+    import sqlite3
+    from app import quals
+
+    active = quals.current()
+    total = month_to_date_cost(conn)
+    for q in quals.QUALS.values():
+        if q.code == active.code or not q.db_path.exists():
+            continue
+        try:
+            other = sqlite3.connect(f"file:{q.db_path}?mode=ro", uri=True)
+            other.row_factory = sqlite3.Row
+            try:
+                total += month_to_date_cost(other)
+            finally:
+                other.close()
+        except sqlite3.Error:
+            continue                      # a missing/locked sibling never blocks a call
+    return total
+
+
 def within_budget(conn) -> tuple[bool, float]:
-    """(ok, month_to_date_cost). ok=False once the monthly ceiling is reached."""
-    mtd = month_to_date_cost(conn)
+    """(ok, month_to_date_cost). ok=False once the monthly ceiling is reached.
+    The ceiling applies to Basic + Advanced combined (one API key, one wallet)."""
+    mtd = month_to_date_cost_all(conn)
     return (mtd < config.AI_MONTHLY_BUDGET_USD, mtd)

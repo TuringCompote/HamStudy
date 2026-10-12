@@ -1,7 +1,8 @@
-# Elmer — Canadian Basic Amateur Radio trainer
+# Elmer — Canadian Basic + Advanced Amateur Radio trainer
 
 A single-user, self-hosted study app to pass the **ISED Basic Amateur Radio
-Qualification with Honours (80%)**. It pairs an interactive learning surface with a
+Qualification with Honours (80%)** — and, once you have, the **Advanced
+Qualification** (`/advanced`, tracked completely separately). It pairs an interactive learning surface with a
 coaching layer: a **deterministic engine** (mastery, adaptive difficulty, spaced
 repetition, readiness — plain code, no LLM) and a **swappable AI layer** (Anthropic)
 for explanations, misconception diagnosis, and the journal.
@@ -28,7 +29,13 @@ Stack: **FastAPI + SQLite + vanilla JS/SVG**, one Docker container, LAN/VPN-only
 
 ## What it does
 
-- **Learn → Interact → Drill** per syllabus section (`/section/{1..8}`): an original
+- **Two qualifications, two tracks.** Basic lives at `/`, Advanced at `/advanced`
+  (topbar switcher; amber accent so you always know which). Each has its own bank,
+  SQLite store, attempts/mastery/tiers, journal, recommendation and explanation seed —
+  nothing mixes. Advanced: 7 sections, 50-question mock (70% pass line, 80% training
+  target), an Advanced formula-sheet trainer, and deeper per-question explanations
+  (derivations + worked examples).
+- **Learn → Interact → Drill** per syllabus section (`/section/{n}`): an original
   short lesson, interactive SVG concept tools, then real ISED bank questions.
 - **8 concept tools** (themed from `tokens.css`): Ohm's law/power, reactance &
   resonance, decibels, SWR/impedance, wavelength↔frequency, series/parallel R&C,
@@ -57,14 +64,17 @@ every one of the 8 sections AND every subsection has been probed.**
 ```bash
 pip install -r requirements.txt
 
-# Build the DB from the free ISED bank + the committed explanation seed:
-python -m app.db.fetch_sources          # downloads the bank into references/ (English-only)
-python -m app.db.ingest                 # parse -> questions (984), bank_version from the PDF
+# Build the DBs from the free ISED banks + the committed explanation seeds:
+python -m app.db.fetch_sources          # downloads both banks into references/ (English-only)
+python -m app.db.ingest                 # Basic: parse -> questions (984), bank_version from the PDF
 python -m app.db.validate               # asserts count==984, ids/sections/options sane
-python -m app.coaching.explain_batch import --path seed/explanations.jsonl
+python -m app.coaching.explain_batch import            # seed/explanations.jsonl
+python -m app.db.ingest --qual advanced                # Advanced -> data/hamstudy_advanced.db
+python -m app.db.validate --qual advanced
+python -m app.coaching.explain_batch --qual advanced import   # seed/explanations_advanced.jsonl
 
-uvicorn app.main:app --reload           # http://127.0.0.1:8000
-python tests/smoke_test.py              # end-to-end check (uses a throwaway DB copy)
+uvicorn app.main:app --reload           # http://127.0.0.1:8000  (+ /advanced)
+python tests/smoke_test.py              # end-to-end check, both tracks (throwaway DB copies)
 ```
 
 `ANTHROPIC_API_KEY` (in a gitignored `.env`) is **optional** — without it the app runs
@@ -101,7 +111,8 @@ proxy / Cloudflare — restrict at the LXC/VPN layer. Details in `AGENT.md` § D
 
 ```
 app/
-  main.py            FastAPI routes + JSON API
+  main.py            FastAPI routes + JSON API, mounted at / (Basic) and /advanced
+  quals.py           qualification profiles: sections, bank, paths, tools — the active one is a ContextVar
   config.py          env-driven settings (paths, AI models, budget, APP_NAME)
   tools.py           section -> concept-tool map      formulas.py  formula-trainer data
   db/                schema.sql · init_db · ingest · validate · fetch_sources · queries · backup
@@ -109,11 +120,12 @@ app/
                      · analysis(trend/miss) · diagnostic(placement) · recommend · coach
   coaching/          AI: ai_provider(+stub) · anthropic_provider · usage(budget) · corpus(RIC)
                      · explain_batch(batch+seed) · journal · prompts(loader)
-  content/sections/  original lesson markdown (1–8)
+  content/sections/  original lesson markdown (Basic 1–8) · sections_advanced/ (Advanced 1–7)
   static/            tokens.css · style.css · quiz.js · journal.js · tools/*.js
   templates/         base · dashboard · section · quiz · formula_trainer
 prompts/             explain · diagnose · narrate · condense · batch_explain  (Console-tunable)
-seed/explanations.jsonl   committed batch explanations (portable; rebuilds the DB on deploy)
+seed/explanations.jsonl           committed Basic explanations (Opus batch; rebuilds the DB on deploy)
+seed/explanations_advanced.jsonl  committed Advanced explanations (deeper; written in-session)
 deploy/              install.sh · elmer.service          tests/  smoke_test.py
 docs/ai-evals/       AI model comparison + eval cases (Console Evaluation tool)
 Dockerfile · docker-compose.yml · requirements.txt
@@ -132,8 +144,8 @@ data/ (gitignored: SQLite, recommendation.json, journal/)   references/ (gitigno
 ## Roadmap (not yet built)
 
 Trend/decay window on tiers · tier-scaled lesson depth + a "tuned for you" condensed-lesson
-cache (`content_cache`) · optional read-only Cowork deep-dive skill · Phase 7: Advanced
-Qualification (re-ingest the Advanced bank, reuse the engine).
+cache (`content_cache`) · optional read-only Cowork deep-dive skill · Advanced-specific
+concept tools (filters/Q, modulation envelopes, Smith-chart matching).
 
 ## License
 

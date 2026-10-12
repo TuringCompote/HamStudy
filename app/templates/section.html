@@ -2,7 +2,7 @@
 {% block title %}{{ name }} — {{ APP_NAME }}{% endblock %}
 {% block content %}
 
-<nav class="crumbs"><a href="/">Dashboard</a> &rsaquo; <span class="mono">Section {{ section }}</span></nav>
+<nav class="crumbs"><a href="{{ BASE }}/">Dashboard</a> &rsaquo; <span class="mono">Section {{ section }}</span></nav>
 
 <div class="section-head">
   <h1>{{ name }}</h1>
@@ -42,7 +42,7 @@
   <strong>New to this section?</strong>
   Take a quick <strong>{{ 8 }}-question diagnostic</strong> to set your starting depth —
   the app then compresses what you know and goes deep where you don't.
-  <form class="diag-form" method="get" action="/quiz">
+  <form class="diag-form" method="get" action="{{ BASE }}/quiz">
     <input type="hidden" name="mode" value="diagnostic">
     <input type="hidden" name="section" value="{{ section }}">
     <label class="diag-conf">How well do you know it?
@@ -87,8 +87,8 @@
 <!-- Drill -->
 <section class="drill">
   <h2 class="step-h"><span class="step">3</span> Drill</h2>
-  <p class="muted">Practice the real ISED bank questions for this section.</p>
-  <a class="btn btn-primary" href="/quiz?mode=drill&section={{ section }}">
+  <p class="muted">Practice the real ISED {{ QUAL.label }} bank questions for this section.</p>
+  <a class="btn btn-primary" href="{{ BASE }}/quiz?mode=drill&section={{ section }}">
     Drill Section {{ section }}</a>
 </section>
 
@@ -105,7 +105,7 @@ document.getElementById("diag-btn").addEventListener("click", async function () 
   const out = document.getElementById("diag-out");
   this.disabled = true; const label = this.textContent; this.textContent = "Thinking…";
   try {
-    const r = await fetch("/api/diagnose", {
+    const r = await fetch(window.ElmerConfig.base + "/api/diagnose", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ section: Number(this.dataset.section) }),
     });

@@ -146,3 +146,18 @@
     --glow-strong: 0 0 16px color-mix(in srgb, var(--accent) 65%, transparent);
   }
 }
+
+/* ---- Advanced qualification: the same instruments, amber phosphor ----
+ * <html data-qual="advanced"> (base.html) flips the one accent so you always
+ * know which track you're on. Deep-tier amber would collide with an amber
+ * accent, so that tier shifts to rust on this track. */
+html[data-qual="advanced"] {
+  --accent: #d98e04; --accent-dim: #a86c05; --accent-ink: #2a1c02;
+  --tier-deep: #c4633a;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-qual="advanced"] {
+    --accent: #ffb52e; --accent-dim: #c8850f; --accent-ink: #2a1c02;
+    --tier-deep: #e8744a;
+  }
+}

@@ -31,6 +31,11 @@ SOURCES = {
         "https://apc-cap.ic.gc.ca/datafiles/amateur_basic_questions_en.pdf",
         "amateur_basic_questions_en.pdf", "pdf",
     ),
+    # REQUIRED for the Advanced track (Phase 7) — same layout, A- ids, 7 sections.
+    "Advanced question bank (REQUIRED for /advanced)": (
+        "https://apc-cap.ic.gc.ca/datafiles/amateur_advanced_questions_en.pdf",
+        "amateur_advanced_questions_en.pdf", "pdf",
+    ),
     # Formula/block-diagram sheets: labelled (study) + unlabelled (exam-legal).
     # Real path is sites/default/files/documents/ (note the trailing space in name).
     "Reference Material ZIP (formula sheets)": (

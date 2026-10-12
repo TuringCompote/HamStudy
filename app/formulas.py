@@ -1,10 +1,14 @@
-"""Curated Basic-exam formula set for the formula-sheet trainer.
+"""Curated formula sets for the formula-sheet trainer (one per qualification).
 
 The real exam permits the ISED **unlabelled** formula/diagram sheet, so the skill
 to train is: recognize an unlabelled formula and know what it computes (and the
 reverse). Formulas are facts; the descriptions here are original (constitution §3).
 `finds` = plain-language quantity it gives you; `formula` = the expression as it
 appears (unlabelled) on the sheet; `vars` = what each symbol means.
+
+`FORMULAS` is the Basic set; `FORMULAS_ADVANCED` adds the Advanced-syllabus
+relationships (Q and bandwidth, filters, impedance transformation, modulation,
+power/ERP, feedline math). `formulas_for(qual)` picks by profile.
 """
 from __future__ import annotations
 
@@ -52,3 +56,85 @@ FORMULAS: list[dict] = [
     {"id": "swr", "section": 6, "finds": "SWR from the reflection coefficient",
      "formula": "SWR = (1 + |Γ|) / (1 − |Γ|)", "vars": "1:1 is a perfect match"},
 ]
+
+
+# --- Advanced Qualification set (sections refer to the ADVANCED bank: 1 theory,
+# 2 components & circuits, 3 measurements, 4 power supplies, 5 transmitters,
+# 6 receivers, 7 feedlines & antennas) --------------------------------------
+FORMULAS_ADVANCED: list[dict] = [
+    {"id": "q_series", "section": 1, "finds": "Q of a series-resonant circuit",
+     "formula": "Q = X / R", "vars": "X reactance of L (or C) at resonance · R series loss"},
+    {"id": "q_parallel", "section": 1, "finds": "Q of a parallel-resonant circuit",
+     "formula": "Q = R / X", "vars": "R parallel (shunt) resistance · X reactance — note it inverts"},
+    {"id": "bandwidth", "section": 1, "finds": "Half-power bandwidth of a tuned circuit",
+     "formula": "BW = f₀ / Q", "vars": "BW hertz · f₀ resonant frequency · higher Q ⇒ narrower"},
+    {"id": "resonance", "section": 1, "finds": "Resonant frequency",
+     "formula": "f₀ = 1 / (2π√(LC))", "vars": "f hertz · L henries · C farads"},
+    {"id": "impedance_series", "section": 1, "finds": "Magnitude of a series R-X impedance",
+     "formula": "|Z| = √(R² + X²)", "vars": "R and X add in quadrature; X = X_L − X_C"},
+    {"id": "phase", "section": 1, "finds": "Phase angle between V and I",
+     "formula": "θ = arctan(X / R)", "vars": "positive = inductive (I lags V) · negative = capacitive"},
+    {"id": "power_factor", "section": 1, "finds": "True power from apparent power",
+     "formula": "P = E × I × cos θ", "vars": "cos θ = power factor · reactive power dissipates nothing"},
+    {"id": "time_const_rl", "section": 1, "finds": "L/R time constant",
+     "formula": "τ = L / R", "vars": "τ seconds · L henries · R ohms (63% in one τ)"},
+    {"id": "time_const_rc", "section": 1, "finds": "RC time constant",
+     "formula": "τ = R × C", "vars": "τ seconds · fully charged ≈ 5τ"},
+    {"id": "db_power", "section": 1, "finds": "Power gain or loss in decibels",
+     "formula": "dB = 10 × log₁₀(P₂/P₁)", "vars": "3 dB ≈ ×2 · 6 dB ≈ ×4 · 10 dB = ×10"},
+    {"id": "z_ratio", "section": 2, "finds": "Transformer impedance ratio from turns",
+     "formula": "Z_p / Z_s = (N_p / N_s)²", "vars": "impedance scales with the SQUARE of the turns ratio"},
+    {"id": "xfmr_turns", "section": 2, "finds": "Turns ratio for an impedance match",
+     "formula": "N_p / N_s = √(Z_p / Z_s)", "vars": "e.g. 50 Ω → 200 Ω needs 1:2 turns"},
+    {"id": "beta", "section": 2, "finds": "Transistor current gain (common emitter)",
+     "formula": "β = I_C / I_B", "vars": "h_FE · collector current per unit base current"},
+    {"id": "alpha", "section": 2, "finds": "Transistor current gain (common base)",
+     "formula": "α = I_C / I_E", "vars": "always slightly below 1 · α = β / (β + 1)"},
+    {"id": "opamp_inv", "section": 2, "finds": "Gain of an inverting op-amp stage",
+     "formula": "A_v = −R_f / R_in", "vars": "set by the resistor ratio, not the op-amp"},
+    {"id": "rc_cutoff", "section": 2, "finds": "Cutoff (−3 dB) frequency of an RC filter",
+     "formula": "f_c = 1 / (2πRC)", "vars": "R ohms · C farads · same form for low- and high-pass"},
+    {"id": "ripple", "section": 4, "finds": "Full-wave rectifier ripple frequency",
+     "formula": "f_ripple = 2 × f_line", "vars": "half-wave = 1× line (60 Hz → 120 Hz full-wave)"},
+    {"id": "peak_rect", "section": 4, "finds": "Peak voltage from an RMS supply",
+     "formula": "V_peak = 1.414 × V_rms", "vars": "a filter capacitor charges toward the peak"},
+    {"id": "pep", "section": 5, "finds": "Peak envelope power from peak voltage",
+     "formula": "PEP = (V_peak / √2)² / R", "vars": "= V_peak² / (2R) · into the load R (50 Ω)"},
+    {"id": "pep_pp", "section": 5, "finds": "PEP from peak-to-peak scope reading",
+     "formula": "PEP = (V_pp)² / (8R)", "vars": "V_pp across R · the 8 = (2√2)²"},
+    {"id": "mod_index_fm", "section": 5, "finds": "FM modulation index",
+     "formula": "m = Δf / f_m", "vars": "Δf peak deviation · f_m modulating frequency"},
+    {"id": "dev_ratio", "section": 5, "finds": "FM deviation ratio",
+     "formula": "D = Δf_max / f_m(max)", "vars": "e.g. 5 kHz / 3 kHz ≈ 1.67 for narrow-band FM"},
+    {"id": "fm_bw", "section": 5, "finds": "FM occupied bandwidth (Carson's rule)",
+     "formula": "BW ≈ 2 × (Δf + f_m)", "vars": "deviation plus highest audio, doubled"},
+    {"id": "am_sideband", "section": 5, "finds": "AM sideband power at 100 % modulation",
+     "formula": "P_sb(total) = P_c / 2", "vars": "each sideband = ¼ carrier power · total = 1.5 × P_c"},
+    {"id": "am_pct", "section": 5, "finds": "AM percentage of modulation from a scope",
+     "formula": "% = (E_max − E_min) / (E_max + E_min) × 100", "vars": "envelope peaks and troughs"},
+    {"id": "duty", "section": 5, "finds": "Average power from PEP and duty cycle",
+     "formula": "P_avg = PEP × duty", "vars": "CW key-down ≈ 100 % · SSB voice ≈ 20–30 %"},
+    {"id": "erp", "section": 7, "finds": "Effective radiated power",
+     "formula": "ERP = P_tx × G − losses (in dB)", "vars": "gain relative to a dipole (dBd); EIRP uses dBi"},
+    {"id": "db_mw", "section": 7, "finds": "Power from decibels above a milliwatt",
+     "formula": "P = 10^(dBm/10) mW", "vars": "0 dBm = 1 mW · 30 dBm = 1 W · 60 dBm = 1 kW"},
+    {"id": "vf", "section": 7, "finds": "Electrical length of a feedline section",
+     "formula": "ℓ = (λ × VF) × fraction", "vars": "VF velocity factor (≈0.66 solid PE, ≈0.8 foam)"},
+    {"id": "qwave_xfmr", "section": 7, "finds": "Quarter-wave transformer impedance",
+     "formula": "Z₀ = √(Z_in × Z_load)", "vars": "a ¼λ line of this Z₀ matches the two impedances"},
+    {"id": "swr_z", "section": 7, "finds": "SWR from a purely resistive mismatch",
+     "formula": "SWR = Z_load / Z₀  (or Z₀ / Z_load)", "vars": "whichever ratio is ≥ 1"},
+    {"id": "refl_coef", "section": 7, "finds": "Reflection coefficient from SWR",
+     "formula": "|Γ| = (SWR − 1) / (SWR + 1)", "vars": "reflected power fraction = |Γ|²"},
+    {"id": "gain_dbi", "section": 7, "finds": "Antenna gain: dBi from dBd",
+     "formula": "dBi = dBd + 2.15", "vars": "an ideal dipole has 2.15 dB over isotropic"},
+    {"id": "halfwave", "section": 7, "finds": "Half-wave dipole length",
+     "formula": "ℓ ≈ 143 / f", "vars": "ℓ metres · f MHz (≈ 468 / f in feet)"},
+    {"id": "beamwidth", "section": 7, "finds": "Approximate gain from beamwidths",
+     "formula": "G ≈ 41 000 / (θ_E × θ_H)", "vars": "half-power beamwidths in degrees · ratio, convert to dB"},
+]
+
+
+def formulas_for(qual) -> list[dict]:
+    """The formula set for a qualification profile (app.quals.Qual)."""
+    return FORMULAS_ADVANCED if qual.code == "advanced" else FORMULAS
