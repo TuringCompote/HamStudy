@@ -13,10 +13,11 @@ from __future__ import annotations
 
 import random
 
+from app import quals
 from app.db import queries
 from app.engine import scheduler, adaptive
 
-MOCK_EXAM_SIZE = 100
+MOCK_EXAM_SIZE = 100          # Basic; the real size comes from the qualification profile
 DEFAULT_DRILL_SIZE = 20
 DEFAULT_REVIEW_SIZE = 20
 DIAGNOSTIC_SIZE = 8
@@ -77,15 +78,17 @@ def build_review(conn, count: int = DEFAULT_REVIEW_SIZE) -> list[dict]:
     return queries.questions_for_ids(conn, due)
 
 
-def build_mock_exam(conn, size: int = MOCK_EXAM_SIZE,
+def build_mock_exam(conn, size: int | None = None,
                     rng: random.Random | None = None) -> list[dict]:
-    """`size`-question exam, section-proportional, sampled across subsections.
+    """Exam of `size` questions (default: the active qualification's real exam
+    length — 100 Basic / 50 Advanced), section-proportional, across subsections.
 
     Within each section we spread picks across its subsections (round-robin over
     shuffled subsection buckets) so a section's allocation isn't drawn from a
     single subsection — a lightweight nod to the real exam's sub-category spread.
     """
     rng = rng or random.Random()
+    size = size or quals.current().exam_size
     sizes = queries.section_sizes(conn)
     alloc = allocate_proportional(sizes, size)
     frame = queries.all_question_ids_by_subsection(conn)

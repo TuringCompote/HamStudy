@@ -35,8 +35,8 @@ timestamps that are already in the log, never against the wall clock. Same
 """
 from __future__ import annotations
 
-from app import config
-from app.db.queries import SECTION_NAMES, SECTION_SHORT_NAMES
+from app import config, quals
+from app.db.queries import section_names, section_short_names
 
 FRESH_COOLDOWN_DAYS = config.FRESH_COOLDOWN_DAYS
 
@@ -60,12 +60,21 @@ def ui_config() -> dict:
     never restate the cutoffs or the tier→CSS map."""
     tiers = [{"name": n, "css": TIER_CSS[n], "min_pct": c} for n, c in TIER_CUTOFFS]
     tiers.append({"name": "deep", "css": TIER_CSS["deep"], "min_pct": None})
+    q = quals.current()
     return {
         "pass_bar": PASS_BAR,
         "honours_bar": HONOURS_BAR,
         "tier_css": TIER_CSS,
         "tiers": tiers,
         "fresh_cooldown_days": FRESH_COOLDOWN_DAYS,
+        # qualification context (the UI never hardcodes these)
+        "qual": q.code,
+        "qual_label": q.label,
+        "base": q.url_prefix,                 # URL space of this qualification
+        "honours": q.honours,                 # does the exam award Honours?
+        "target_label": q.target_label,       # "Honours" | "target" for the 80% bar
+        "exam_size": q.exam_size,
+        "section_count": q.section_count,
     }
 
 
@@ -148,7 +157,8 @@ def mastery_band(pct: float | None) -> str | None:
 
 def compute_section_mastery(conn, before: str | None = None) -> dict[int, dict]:
     """Return {section: {name, answered, correct, mastery_pct, seen,
-    size, coverage_pct, meets_honours}} for sections 1..8.
+    size, coverage_pct, meets_honours}} for every section of the active
+    qualification (8 for Basic, 7 for Advanced).
 
     `before` (ISO-8601 UTC) restricts the log to attempts strictly earlier than
     that instant — "mastery as it stood then". Used by the day digest to compute
@@ -189,8 +199,9 @@ def compute_section_mastery(conn, before: str | None = None) -> dict[int, dict]:
         ).fetchall()
     }
 
+    names, shorts = section_names(), section_short_names()
     out: dict[int, dict] = {}
-    for section in range(1, 9):
+    for section in quals.current().sections:
         size = sizes.get(section, 0)
         s = stats.get(section)
         answered = s["answered"] if s else 0
@@ -208,8 +219,8 @@ def compute_section_mastery(conn, before: str | None = None) -> dict[int, dict]:
         tier = depth_tier(fresh_pct)
         out[section] = {
             "section": section,
-            "name": SECTION_NAMES.get(section, f"Section {section}"),
-            "short": SECTION_SHORT_NAMES.get(section, f"Section {section}"),
+            "name": names.get(section, f"Section {section}"),
+            "short": shorts.get(section, f"Section {section}"),
             "size": size,
             "answered": answered,
             "correct": correct,
@@ -241,7 +252,7 @@ def overall_summary(conn) -> dict:
         "sections_meeting_honours": sections_meeting,
         # NB: true readiness also needs the §6d.4 coverage guarantee (Phase 4.5/5);
         # this flag is a coarse Phase-2 placeholder, not the terminal signal.
-        "all_sections_honours": sections_meeting == 8,
+        "all_sections_honours": sections_meeting == quals.current().section_count,
         "pass_bar": PASS_BAR,
         "honours_bar": HONOURS_BAR,
     }

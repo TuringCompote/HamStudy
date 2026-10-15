@@ -1,8 +1,18 @@
-"""FastAPI app — Phase 2 quiz engine MVP.
+"""FastAPI app — quiz engine + dashboard for BOTH qualifications.
 
 Server-rendered dashboard + quiz-runner shell (Jinja); the quiz itself runs in
 vanilla JS against a small JSON API. Correct answers are NEVER included in the
 quiz payload — the server grades each submission and appends to `attempts`.
+
+Two qualifications, two URL spaces, two stores (Phase 7):
+    /            Basic     -> data/hamstudy.db
+    /advanced    Advanced  -> data/hamstudy_advanced.db
+The same `router` is mounted twice; `_QualScope` is a tiny ASGI wrapper that
+activates the right profile (app/quals.py ContextVar) for each request, so
+`connect()`, section lists, paths and labels all resolve to the right track with
+no branching in the routes or the engine. `/static` is shared (one UI, themed per
+qualification via <html data-qual>). Templates/JS build links from `BASE`
+(the qualification's URL prefix) — never a hardcoded "/".
 
 Run:  uvicorn app.main:app --reload
 """
@@ -11,8 +21,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -20,7 +30,7 @@ from pydantic import BaseModel, Field
 from app.db import queries
 from app.db.init_db import connect
 from app.engine import mastery, coach, diagnostic, recommend, analysis, adaptive
-from app import quiz, config, tools, content, formulas
+from app import quiz, config, tools, content, formulas, quals
 from app.coaching.ai_provider import get_provider
 from app.coaching import journal as journal_mod, usage as usage_mod, corpus as corpus_mod
 from app.coaching import explain_batch
@@ -28,19 +38,34 @@ from app.coaching import explain_batch
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 templates.env.globals["APP_NAME"] = config.APP_NAME  # available in every template
-# tier map + pass/honours bars, emitted once for every page (window.ElmerConfig)
-templates.env.globals["UI_CONFIG"] = mastery.ui_config()
-
-app = FastAPI(title=f"{config.APP_NAME} — Canadian Basic (Honours) trainer")
+templates.env.globals["QUALS"] = list(quals.QUALS.values())  # topbar switcher
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
+MAX_SECTION = max(q.section_count for q in quals.QUALS.values())
+
+router = APIRouter()
+
+
+def _render(request: Request, name: str, ctx: dict):
+    """TemplateResponse with the per-qualification context folded in: UI_CONFIG
+    (tier map + bars + qual context → window.ElmerConfig), QUAL (the profile) and
+    BASE (its URL prefix; every link/fetch in templates and JS is built on it)."""
+    q = quals.current()
+    return templates.TemplateResponse(
+        request, name,
+        {**ctx, "UI_CONFIG": mastery.ui_config(), "QUAL": q, "BASE": q.url_prefix},
+    )
+
+
+def _check_section(section: int) -> None:
+    if section not in quals.current().sections:
+        raise HTTPException(404, f"section must be one of {quals.current().sections}")
 
 
 # --- request models ---
 class QuizRequest(BaseModel):
     mode: str = Field(pattern="^(drill|exam|review|diagnostic)$")
-    section: int | None = Field(default=None, ge=1, le=8)
+    section: int | None = Field(default=None, ge=1, le=MAX_SECTION)
     count: int | None = Field(default=None, ge=1, le=200)
 
 
@@ -52,7 +77,7 @@ class AttemptRequest(BaseModel):
 
 
 class DiagnosticRequest(BaseModel):
-    section: int = Field(ge=1, le=8)
+    section: int = Field(ge=1, le=MAX_SECTION)
     served_ids: list[str] = Field(min_length=1, max_length=20)
     confidence_prior: str | None = None
 
@@ -63,11 +88,11 @@ class ExplainRequest(BaseModel):
 
 
 class DiagnoseRequest(BaseModel):
-    section: int = Field(ge=1, le=8)
+    section: int = Field(ge=1, le=MAX_SECTION)
 
 
 # --- pages ---
-@app.get("/", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
     conn = connect()
     try:
@@ -83,7 +108,7 @@ def dashboard(request: Request):
             s["fast_wrong"] = wrong.get(s["section"], {}).get("fast_wrong", 0)
     finally:
         conn.close()
-    return templates.TemplateResponse(
+    return _render(
         request,
         "dashboard.html",
         {"sections": by_section, "summary": summary,
@@ -91,10 +116,9 @@ def dashboard(request: Request):
     )
 
 
-@app.get("/section/{section}", response_class=HTMLResponse)
+@router.get("/section/{section}", response_class=HTMLResponse)
 def section_page(request: Request, section: int):
-    if not 1 <= section <= 8:
-        raise HTTPException(404, "section must be 1..8")
+    _check_section(section)
     conn = connect()
     try:
         by_section = mastery.compute_section_mastery(conn)
@@ -119,12 +143,12 @@ def section_page(request: Request, section: int):
         conn.close()
     # offer the placement probe when the section is essentially unrated
     offer_diagnostic = (not has_diag) and stats["fresh_answered"] < diagnostic.MIN_FRESH_FOR_TIER
-    return templates.TemplateResponse(
+    return _render(
         request,
         "section.html",
         {
             "section": section,
-            "name": queries.SECTION_NAMES[section],
+            "name": queries.section_names()[section],
             "lesson_html": content.lesson_html(section),
             "tools": tools.tools_for_section(section),
             "stats": stats,
@@ -134,8 +158,9 @@ def section_page(request: Request, section: int):
     )
 
 
-@app.post("/api/diagnostic")
+@router.post("/api/diagnostic")
 def api_diagnostic(req: DiagnosticRequest):
+    _check_section(req.section)
     conn = connect()
     try:
         return diagnostic.record_diagnostic(
@@ -145,16 +170,19 @@ def api_diagnostic(req: DiagnosticRequest):
         conn.close()
 
 
-@app.get("/manifest.webmanifest")
+@router.get("/manifest.webmanifest")
 def manifest():
     """Web app manifest (name from config — never hardcode APP_NAME). iOS uses
     the apple-* metas in base.html for Add to Home Screen; this serves desktop
-    Chrome/Edge and keeps the colors/icons in one generated place."""
+    Chrome/Edge and keeps the colors/icons in one generated place. Each
+    qualification serves its own (start_url + name), so both can sit on the
+    home screen as separate apps."""
+    q = quals.current()
     return JSONResponse(
         {
-            "name": config.APP_NAME,
-            "short_name": config.APP_NAME,
-            "start_url": "/",
+            "name": f"{config.APP_NAME} — {q.label}",
+            "short_name": q.short_name or config.APP_NAME,
+            "start_url": f"{q.url_prefix}/",
             "display": "standalone",
             "background_color": "#0a0e0d",   # mirrors --bg (dark) in tokens.css
             "theme_color": "#0a0e0d",
@@ -167,31 +195,32 @@ def manifest():
     )
 
 
-@app.get("/formula-trainer", response_class=HTMLResponse)
+@router.get("/formula-trainer", response_class=HTMLResponse)
 def formula_trainer(request: Request):
-    return templates.TemplateResponse(
-        request, "formula_trainer.html", {"formulas": formulas.FORMULAS},
-    )
+    return _render(request, "formula_trainer.html",
+                   {"formulas": formulas.formulas_for(quals.current())})
 
 
-@app.get("/quiz", response_class=HTMLResponse)
+@router.get("/quiz", response_class=HTMLResponse)
 def quiz_page(request: Request, mode: str = "drill", section: int | None = None,
               confidence: str | None = None):
     if mode not in ("drill", "exam", "review", "diagnostic"):
         raise HTTPException(400, "mode must be 'drill', 'exam', 'review', or 'diagnostic'")
+    if section is not None:
+        _check_section(section)
     title = {"exam": "Mock Exam", "review": "Review",
              "diagnostic": f"Diagnostic — Section {section}"}.get(mode, f"Drill — Section {section}")
-    return templates.TemplateResponse(
+    return _render(
         request,
         "quiz.html",
         {"mode": mode, "section": section, "title": title,
          "confidence": confidence,
-         "section_name": queries.SECTION_NAMES.get(section or 0, "")},
+         "section_name": queries.section_names().get(section or 0, "")},
     )
 
 
 # --- JSON API ---
-@app.get("/api/sections")
+@router.get("/api/sections")
 def api_sections():
     conn = connect()
     try:
@@ -205,7 +234,7 @@ def api_sections():
         conn.close()
 
 
-@app.post("/api/quiz")
+@router.post("/api/quiz")
 def api_quiz(req: QuizRequest):
     conn = connect()
     try:
@@ -218,10 +247,12 @@ def api_quiz(req: QuizRequest):
         elif req.mode == "diagnostic":
             if req.section is None:
                 raise HTTPException(400, "diagnostic requires a section")
+            _check_section(req.section)
             questions = quiz.build_diagnostic(conn, req.section)
         else:
             if req.section is None:
                 raise HTTPException(400, "drill requires a section")
+            _check_section(req.section)
             questions = quiz.build_drill(
                 conn, req.section, req.count or quiz.DEFAULT_DRILL_SIZE
             )
@@ -232,7 +263,7 @@ def api_quiz(req: QuizRequest):
         conn.close()
 
 
-@app.post("/api/attempt")
+@router.post("/api/attempt")
 def api_attempt(req: AttemptRequest):
     conn = connect()
     try:
@@ -249,7 +280,7 @@ def api_attempt(req: AttemptRequest):
         conn.close()
 
 
-@app.post("/api/explain")
+@router.post("/api/explain")
 def api_explain(req: ExplainRequest):
     """Cache-first (§6f): return the batch-generated structured layers if present,
     with adaptive reveal depth from the user's §6d tier. Falls back to a live
@@ -285,15 +316,16 @@ def api_explain(req: ExplainRequest):
             "model": result.model, "cost_usd": round(result.cost_usd, 6)}
 
 
-@app.post("/api/diagnose")
+@router.post("/api/diagnose")
 def api_diagnose(req: DiagnoseRequest):
     """Live per-user misconception diagnosis for a section (Sonnet, budget-gated).
     Builds the miss summary deterministically from attempts; falls back to the stub
     when over budget / no key. Returns a friendly note when there are no misses."""
+    _check_section(req.section)
     conn = connect()
     try:
         summary = analysis.section_miss_summary(conn, req.section)
-        name = queries.SECTION_NAMES[req.section]
+        name = queries.section_names()[req.section]
         grounding = corpus_mod.ground_for_section(req.section)
     finally:
         conn.close()
@@ -306,7 +338,7 @@ def api_diagnose(req: DiagnoseRequest):
             "cost_usd": round(res.cost_usd, 6), "empty": False}
 
 
-@app.post("/api/journal")
+@router.post("/api/journal")
 def api_journal():
     conn = connect()
     try:
@@ -315,7 +347,7 @@ def api_journal():
         conn.close()
 
 
-@app.get("/api/journal/dates")
+@router.get("/api/journal/dates")
 def api_journal_dates():
     conn = connect()
     try:
@@ -327,7 +359,7 @@ def api_journal_dates():
     return {"dates": [r["entry_date"] for r in rows]}
 
 
-@app.get("/api/journal/entry/{entry_date}")
+@router.get("/api/journal/entry/{entry_date}")
 def api_journal_entry(entry_date: str):
     if not _DATE_RE.match(entry_date):       # guard against path traversal / junk
         raise HTTPException(400, "date must be YYYY-MM-DD")
@@ -347,7 +379,7 @@ def api_journal_entry(entry_date: str):
     return {"date": entry_date, "html": _md.markdown(text, extensions=["extra"])}
 
 
-@app.get("/api/ai-status")
+@router.get("/api/ai-status")
 def api_ai_status():
     conn = connect()
     try:
@@ -358,7 +390,7 @@ def api_ai_status():
             "month_to_date_usd": round(mtd, 4), "ceiling_usd": config.AI_MONTHLY_BUDGET_USD}
 
 
-@app.get("/api/health")
+@router.get("/api/health")
 def health():
     conn = connect()
     try:
@@ -368,5 +400,52 @@ def health():
         ).fetchone()
     finally:
         conn.close()
-    return {"status": "ok", "questions": n,
-            "bank_version": bv["value"] if bv else None}
+    q = quals.current()
+    return {"status": "ok", "qual": q.code, "questions": n,
+            "bank_version": bv["value"] if bv else None,
+            "sections": q.section_count, "exam_size": q.exam_size}
+
+
+# --- assembly: one trainer per qualification, mounted side by side -------------
+class _QualScope:
+    """ASGI wrapper: activate a qualification profile for the life of a request.
+    Starlette's Mount already strips the prefix and sets scope["root_path"]; this
+    only flips the ContextVar so `connect()` / `quals.current()` resolve correctly
+    (contextvars propagate into the threadpool that runs the sync endpoints)."""
+
+    def __init__(self, inner, code: str):
+        self.inner, self.code = inner, code
+
+    async def __call__(self, scope, receive, send):
+        token = quals.activate(self.code)
+        try:
+            q = quals.current()
+            if not q.db_path.exists():
+                # a track whose bank hasn't been ingested yet still renders (empty),
+                # with the dashboard pointing at the ingest step
+                from app.db.init_db import init_db
+                init_db(q.db_path).close()
+            await self.inner(scope, receive, send)
+        finally:
+            quals.reset(token)
+
+
+def create_app(qual: quals.Qual) -> FastAPI:
+    sub = FastAPI(title=f"{config.APP_NAME} — Canadian {qual.label} trainer")
+    sub.include_router(router)
+    return sub
+
+
+app = FastAPI(title=f"{config.APP_NAME} — Canadian Basic + Advanced trainer")
+app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
+
+
+@app.get("/advanced", include_in_schema=False)
+def _advanced_slash():
+    """`/advanced` (no slash) → the Advanced dashboard. Mounts only match with
+    the trailing slash; this keeps a typed URL working."""
+    return RedirectResponse("/advanced/", status_code=307)
+
+# order matters: the longer prefix first, Basic as the catch-all at "/"
+for _q in sorted(quals.QUALS.values(), key=lambda q: -len(q.url_prefix)):
+    app.mount(_q.url_prefix or "/", _QualScope(create_app(_q), _q.code), name=_q.code)

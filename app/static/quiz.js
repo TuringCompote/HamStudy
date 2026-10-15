@@ -12,6 +12,9 @@ const OPTION_LETTERS = ["A", "B", "C", "D"];
 // tier map + pass/honours bars — injected once by base.html (mastery.ui_config);
 // never restate the numbers here
 const CFG = window.ElmerConfig;
+// URL space of the active qualification ("" for Basic, "/advanced" for Advanced):
+// every link and API call is built on it so the two tracks never cross.
+const BASE = CFG.base || "";
 
 let questions = [];
 let idx = 0;
@@ -26,7 +29,7 @@ let timerHandle = null;
 // Every answer is already committed server-side via /api/attempt; this only
 // preserves the in-flight run (question set, position, results screen). The
 // payload never contains answers for unanswered questions.
-const STORE_KEY = `elmer.quiz.${MODE}.${SECTION || "all"}`;
+const STORE_KEY = `elmer.${CFG.qual || "basic"}.quiz.${MODE}.${SECTION || "all"}`;
 
 function saveState(nextIdx) {
   try {
@@ -54,7 +57,7 @@ function loadState() {
 }
 
 async function api(path, body) {
-  const res = await fetch(path, {
+  const res = await fetch(BASE + path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -249,7 +252,7 @@ function tierCss(t) {
 function refreshJournal() {
   // fire-and-forget: rewrite today's journal entry now that the day's log grew
   // (server-side it's budget-guarded and same-day idempotent)
-  if (answered > 0) fetch("/api/journal", { method: "POST" }).catch(() => {});
+  if (answered > 0) fetch(BASE + "/api/journal", { method: "POST" }).catch(() => {});
 }
 
 async function finishDiagnostic() {
@@ -274,8 +277,8 @@ async function finishDiagnostic() {
     <p class="muted small">This seeds your plan — your tier updates automatically as you
       drill (measured performance wins over the probe).</p>
     <div class="card-actions">
-      <a class="btn btn-primary" href="/section/${SECTION}">Back to section</a>
-      <a class="btn" href="/">Dashboard</a>
+      <a class="btn btn-primary" href="${BASE}/section/${SECTION}">Back to section</a>
+      <a class="btn" href="${BASE}/">Dashboard</a>
     </div>`;
   el("results").classList.remove("hidden");
 }
@@ -306,7 +309,7 @@ function finish() {
     MODE === "exam"
       ? `<div class="exam-lines">
            <span class="line pass">${CFG.pass_bar}% pass</span>
-           <span class="line honours">${CFG.honours_bar}% Honours</span>
+           <span class="line honours">${CFG.honours_bar}% ${CFG.target_label}</span>
          </div>`
       : "";
 
@@ -322,9 +325,11 @@ function finish() {
   const verdict =
     MODE === "exam"
       ? pct >= CFG.honours_bar
-        ? `<p class="verdict ok">Honours-level — ${pct}% 🎉</p>`
+        ? (CFG.honours
+            ? `<p class="verdict ok">Honours-level — ${pct}% 🎉</p>`
+            : `<p class="verdict ok">Pass with margin — ${pct}% (above the ${CFG.honours_bar}% training target) 🎉</p>`)
         : pct >= CFG.pass_bar
-        ? `<p class="verdict warn">Pass (${pct}%), but below the ${CFG.honours_bar}% Honours bar.</p>`
+        ? `<p class="verdict warn">Pass (${pct}%), but below the ${CFG.honours_bar}% ${CFG.target_label} bar.</p>`
         : `<p class="verdict bad">${pct}% — below the ${CFG.pass_bar}% pass line.</p>`
       : `<p class="verdict">${correctCount}/${answered} correct (${pct}%).</p>`;
 
@@ -337,8 +342,8 @@ function finish() {
     <table class="section-table"><thead><tr><th>Section</th><th>Score</th><th>%</th></tr></thead>
       <tbody>${rows}</tbody></table>
     <div class="card-actions">
-      <a class="btn btn-primary" href="/">Back to dashboard</a>
-      <a class="btn" href="/quiz?mode=${MODE}${SECTION ? "&section=" + SECTION : ""}">Again</a>
+      <a class="btn btn-primary" href="${BASE}/">Back to dashboard</a>
+      <a class="btn" href="${BASE}/quiz?mode=${MODE}${SECTION ? "&section=" + SECTION : ""}">Again</a>
     </div>`;
   if (MODE === "exam") renderMissReview(el("results"));
   el("results").classList.remove("hidden");
@@ -440,6 +445,7 @@ function renderExplanation(container, r, chosenText, chosenLetter) {
     layer("distractors", "Why the others are wrong", `<ul class="exp-list">${items}</ul>`);
   }
   layer("concept", "Concept", escapeHtml(L.concept));
+  if (L.worked_example) layer("worked_example", "Worked example", escapeHtml(L.worked_example));
   layer("misconception", "Watch out", escapeHtml(L.misconception));
   if (L.link) layer("link", "Revisit", escapeHtml(L.link));
   if (L.mnemonic) layer("mnemonic", "Mnemonic", escapeHtml(L.mnemonic));

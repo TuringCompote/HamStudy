@@ -10,6 +10,8 @@ Ohm's law, reactance/resonance, decibels, SWR/impedance, wavelength↔frequency.
 """
 from __future__ import annotations
 
+from app import quals
+
 # id -> metadata. `js` is the static path included on the section page.
 TOOLS: dict[str, dict] = {
     "ohms": {
@@ -54,20 +56,16 @@ TOOLS: dict[str, dict] = {
     },
 }
 
-# section number -> ordered list of tool ids shown on that section's page.
-SECTION_TOOLS: dict[int, list[str]] = {
-    1: ["bandplan"],                         # Regulations (privileges by qualification)
-    4: ["seriesparallel"],                   # Circuit Components
-    5: ["ohms", "reactance", "decibel"],     # Basic Electronics & Theory
-    6: ["swr", "wavelength"],                # Feedlines & Antenna Systems
-    7: ["propagation"],                      # Radio Wave Propagation
-}
+# section number -> ordered list of tool ids is a property of the qualification
+# (app/quals.py: Basic maps 1/4/5/6/7; Advanced reuses the electronics/antenna
+# tools on its own sections). Kept as an alias for back-compat.
+SECTION_TOOLS: dict[int, list[str]] = quals.BASIC.tools
 
 
 def tools_for_section(section: int) -> list[dict]:
-    """Return [{id, name, blurb, js}] for a section (empty if none)."""
+    """Return [{id, name, blurb, js}] for a section of the ACTIVE qualification."""
     out = []
-    for tid in SECTION_TOOLS.get(section, []):
+    for tid in quals.current().tools.get(section, []):
         meta = TOOLS.get(tid)
         if meta:
             out.append({"id": tid, **meta})

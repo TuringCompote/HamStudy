@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app import config, timeutil
-from app.db.queries import SECTION_SHORT_NAMES
+from app import timeutil, quals
+from app.db.queries import section_short_names
 from app.engine import recommend, mastery, diagnostic, day_digest
 from app.coaching.ai_provider import get_provider
 
@@ -33,7 +33,7 @@ def write_journal(conn, entry_date: str | None = None) -> dict:
     digest = day_digest.build_day_digest(conn, entry_date)
     ns = rec["next_session"]
     digest["plan"] = {
-        "focus_section": SECTION_SHORT_NAMES.get(ns.get("focus_section"), None),
+        "focus_section": section_short_names().get(ns.get("focus_section"), None),
         "new_count": ns["new_count"],
         "review_count": ns["review_count"],
         "rationale": ns.get("rationale", ""),
@@ -48,7 +48,7 @@ def write_journal(conn, entry_date: str | None = None) -> dict:
 
     narration = get_provider().narrate(digest=digest)
 
-    lines = [f"# Study journal — {entry_date}", ""]
+    lines = [f"# Study journal ({quals.current().label}) — {entry_date}", ""]
     lines.append(narration.text.strip())
     if digest["answered"]:
         lines.append("")
@@ -91,8 +91,9 @@ def write_journal(conn, entry_date: str | None = None) -> dict:
         lines.append("_(AI narration unavailable — deterministic summary.)_")
     body = "\n".join(lines) + "\n"
 
-    config.JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
-    path = config.JOURNAL_DIR / f"{entry_date}.md"
+    jdir = quals.current().journal_dir
+    jdir.mkdir(parents=True, exist_ok=True)
+    path = jdir / f"{entry_date}.md"
     path.write_text(body, encoding="utf-8")
 
     # index it (one row per date; replace on rewrite)

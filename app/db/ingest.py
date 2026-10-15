@@ -1,10 +1,11 @@
-"""Ingest the official ISED Basic question bank PDF into the `questions` table.
+"""Ingest an official ISED question bank PDF (Basic or Advanced) into `questions`.
 
 Ground truth = the official PDF (constitution §2). The bank is a two-column
 layout; naive text extraction interleaves the columns, so we reconstruct each
 page column-by-column (split at the empty gutter) before parsing.
 
-Question format (per the bank's foreword):
+Both banks share one layout; the id prefix is the qualification letter
+(B- Basic, A- Advanced). Question format (per the bank's foreword):
     B-AAA-BBB-CCC (X)        <- id + correct-answer letter in brackets
     <stem, 1+ lines>
     A <option a, 1+ lines>
@@ -19,7 +20,8 @@ Idempotent: upserts by `id`, (re)sets `bank_version`, and NEVER touches
 effective date, not hardcoded.
 
 Usage:
-    python -m app.db.ingest                 # uses config.BANK_PDF -> config.DB_PATH
+    python -m app.db.ingest                      # Basic: config.BANK_PDF -> config.DB_PATH
+    python -m app.db.ingest --qual advanced      # Advanced bank -> its own DB
     python -m app.db.ingest --pdf path.pdf --db path.db
 """
 from __future__ import annotations
@@ -32,19 +34,24 @@ from datetime import datetime, timezone
 
 import pdfplumber
 
-from app import config
+from app import config, quals
 from app.db.init_db import init_db
 
 # --- layout constants (verified against the 2025 bank, 612x792 pt pages) ---
 COLUMN_SPLIT_X = 257   # empty vertical gutter between the two columns
 LINE_Y_TOL = 3         # words within this many pts of `top` are the same line
 
-_ID_RE = re.compile(
-    r"^(?:"
-    r"B-(\d{3})-(\d{3})-(\d{3})\s+\(([A-D])\)"      # normal: id (X)
-    r"|\(([A-D])\)\s+B-(\d{3})-(\d{3})-(\d{3})"     # reversed: (X) id
-    r")$"
-)
+def _id_regex(prefix: str) -> re.Pattern:
+    """Question-id matcher for a qualification letter (B or A)."""
+    return re.compile(
+        r"^(?:"
+        rf"{prefix}-(\d{{3}})-(\d{{3}})-(\d{{3}})\s+\(([A-D])\)"      # normal: id (X)
+        rf"|\(([A-D])\)\s+{prefix}-(\d{{3}})-(\d{{3}})-(\d{{3}})"     # reversed: (X) id
+        r")$"
+    )
+
+
+_ID_RE = _id_regex("B")   # back-compat default
 _OPT_RE = re.compile(r"^([A-D])\s+(.*)$")
 _DATE_RE = re.compile(
     r"(\d{1,2})\s+"
@@ -92,6 +99,25 @@ def extract_bank_version(pdf) -> str:
     return f"{year:04d}-{month:02d}-{day:02d}"
 
 
+def _join(lines: list[str]) -> str:
+    """Join visual lines into one string. A word hyphenated across a line break
+    ("left-" / "hand rule", "12.21-" / "MHz") is re-joined without a space;
+    everything else gets one. Verified exact against ISED's delimited data file
+    for the whole Advanced bank."""
+    out = ""
+    for ln in lines:
+        ln = ln.strip()
+        if not ln:
+            continue
+        if out and re.search(r"\w-$", out) and ln[:1].isalnum():   # "Peak-" + "Envelope"
+            out += ln
+        elif out:
+            out += " " + ln
+        else:
+            out = ln
+    return out
+
+
 def _parse_block(qid: str, ans: str, body: list[str]) -> dict:
     """Split a question block's body lines into stem + 4 options.
 
@@ -119,12 +145,11 @@ def _parse_block(qid: str, ans: str, body: list[str]) -> dict:
     if None in (a, b, c):
         raise ValueError(f"{qid}: could not locate A/B/C/D option markers")
 
-    stem = " ".join(ls[:a]).strip()
+    stem = _join(ls[:a])
     options = []
     for start, end in [(a, b), (b, c), (c, d), (d, len(ls))]:
         head = _OPT_RE.match(ls[start]).group(2)
-        tail = " ".join(ls[start + 1:end])
-        options.append((head + " " + tail).strip())
+        options.append(_join([head] + ls[start + 1:end]))
 
     if not stem:
         raise ValueError(f"{qid}: empty stem")
@@ -143,8 +168,11 @@ def _parse_block(qid: str, ans: str, body: list[str]) -> dict:
     }
 
 
-def parse_pdf(pdf_path) -> tuple[list[dict], str]:
-    """Parse the bank PDF -> (list of question dicts, bank_version)."""
+def parse_pdf(pdf_path, prefix: str | None = None) -> tuple[list[dict], str]:
+    """Parse a bank PDF -> (list of question dicts, bank_version). `prefix` is the
+    qualification letter (default: the active qualification's)."""
+    prefix = prefix or quals.current().id_prefix
+    id_re = _id_regex(prefix)
     questions: list[dict] = []
     with pdfplumber.open(pdf_path) as pdf:
         bank_version = extract_bank_version(pdf)
@@ -155,15 +183,15 @@ def parse_pdf(pdf_path) -> tuple[list[dict], str]:
     cur_id = cur_ans = None
     body: list[str] = []
     for raw in lines:
-        m = _ID_RE.match(raw.strip())
+        m = id_re.match(raw.strip())
         if m:
             if cur_id is not None:
                 questions.append(_parse_block(cur_id, cur_ans, body))
             if m.group(1):                # normal "id (X)"
-                cur_id = f"B-{m.group(1)}-{m.group(2)}-{m.group(3)}"
+                cur_id = f"{prefix}-{m.group(1)}-{m.group(2)}-{m.group(3)}"
                 cur_ans = m.group(4)
             else:                         # reversed "(X) id"
-                cur_id = f"B-{m.group(6)}-{m.group(7)}-{m.group(8)}"
+                cur_id = f"{prefix}-{m.group(6)}-{m.group(7)}-{m.group(8)}"
                 cur_ans = m.group(5)
             body = []
         elif cur_id is not None:
@@ -216,25 +244,34 @@ def upsert_questions(conn: sqlite3.Connection, questions: list[dict], bank_versi
 
 
 def ingest(pdf_path=None, db_path=None) -> dict:
-    pdf_path = pdf_path or config.BANK_PDF
+    q = quals.current()
+    pdf_path = pdf_path or q.bank_pdf
     if not pdf_path.exists():
         raise FileNotFoundError(
-            f"bank PDF not found at {pdf_path} — download it into references/ first"
+            f"{q.label} bank PDF not found at {pdf_path} — download it into references/ "
+            f"first (python -m app.db.fetch_sources, or manually from {q.bank_url})"
         )
-    questions, bank_version = parse_pdf(pdf_path)
+    questions, bank_version = parse_pdf(pdf_path, q.id_prefix)
     conn = init_db(db_path)               # ensure schema exists; idempotent
     n = upsert_questions(conn, questions, bank_version)
+    conn.execute(
+        "INSERT INTO meta(key, value) VALUES('qualification', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (q.code,))
+    conn.commit()
     conn.close()
-    return {"ingested": n, "bank_version": bank_version, "pdf": str(pdf_path)}
+    return {"ingested": n, "bank_version": bank_version, "pdf": str(pdf_path),
+            "qual": q.code, "db": str(db_path or q.db_path)}
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="Ingest the ISED Basic question bank.")
+    ap = argparse.ArgumentParser(description="Ingest an ISED question bank (Basic/Advanced).")
+    quals.add_cli_arg(ap)
     ap.add_argument("--pdf", type=lambda p: __import__("pathlib").Path(p))
     ap.add_argument("--db", type=lambda p: __import__("pathlib").Path(p))
     args = ap.parse_args()
+    quals.activate(args.qual)
     result = ingest(args.pdf, args.db)
     print(
-        f"ingested {result['ingested']} questions "
-        f"(bank_version={result['bank_version']}) into {db_path if (db_path:=args.db) else config.DB_PATH}"
+        f"ingested {result['ingested']} {result['qual']} questions "
+        f"(bank_version={result['bank_version']}) into {result['db']}"
     )

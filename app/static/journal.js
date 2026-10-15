@@ -3,6 +3,8 @@
 "use strict";
 const el = (id) => document.getElementById(id);
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// URL space of the active qualification — each track has its own journal
+const BASE = (window.ElmerConfig && window.ElmerConfig.base) || "";
 
 let weekOffset = 0;
 let entryDates = new Set();
@@ -19,7 +21,7 @@ function fmt(d) {
 
 async function loadDates() {
   try {
-    const r = await fetch("/api/journal/dates");
+    const r = await fetch(BASE + "/api/journal/dates");
     entryDates = new Set((await r.json()).dates || []);
   } catch (e) {
     entryDates = new Set();
@@ -41,7 +43,7 @@ async function loadEntry(di) {
   el("jr-close").onclick = closeEntry;
   const body = out.querySelector(".jr-body");
   try {
-    const r = await fetch("/api/journal/entry/" + di);
+    const r = await fetch(BASE + "/api/journal/entry/" + di);
     if (!r.ok) { body.innerHTML = "<p class='muted'>No entry for that day.</p>"; return; }
     body.innerHTML = (await r.json()).html;
   } catch (e) {
@@ -85,7 +87,7 @@ if (el("jr-days")) {
     writeBtn.onclick = async function () {
       this.disabled = true; const label = this.textContent; this.textContent = "Writing…";
       try {
-        const r = await fetch("/api/journal", { method: "POST" });
+        const r = await fetch(BASE + "/api/journal", { method: "POST" });
         if (!r.ok) throw new Error("journal write failed: " + r.status);
         await loadDates();
         weekOffset = 0;

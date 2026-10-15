@@ -271,3 +271,68 @@ real cold-recall evidence. It is a knob, not a constant —
 `HAMSTUDY_FRESH_COOLDOWN_DAYS=7` makes readiness a stricter (slower-moving) signal,
 `=1` makes daily drilling count immediately, `=0` reverts to first-exposure-only.
 Worth revisiting once there's a few weeks of post-fix data.
+
+## 2026-10-12 — Phase 7: Advanced Qualification (separate track, same engine)
+
+User passed Basic **with Honours**; asked for Advanced "also available, but separate
+and tracked separately, same sources, same format, with the AI content generated in
+this session (more, deeper)".
+
+**Architecture — qualification profiles, not a flag.** New `app/quals.py`: one `Qual`
+per track (`BASIC`, `ADVANCED`) carrying id prefix (B-/A-), section names (8 / 7),
+exam size (100 / 50), honours flag, bank PDF/URL, seed file, lessons dir, tool map,
+grounding map, and derived paths. The active profile is a **ContextVar**:
+`app/main.py` now builds one `APIRouter`, mounts it twice (`/` Basic, `/advanced`
+Advanced) behind a 10-line ASGI wrapper that activates the profile per request.
+`connect()` opens `quals.current().db_path`; the engine iterates
+`quals.current().sections` instead of `range(1, 9)`; recommend/journal/content/
+tools/corpus read their paths and maps from the profile. **No engine math changed**
+and nothing branches on the qualification. Two SQLite files
+(`data/hamstudy.db`, `data/hamstudy_advanced.db`), two journal folders, two
+recommendation.json files — `attempts`/`progress`/`diagnostics`/`explanations`
+never mix. The AI budget guard sums both stores (one wallet).
+
+**Data.** The ISED Advanced bank is `amateur_advanced_questions_en.pdf` (effective
+2025-02-04, 549 questions, 7 sections, 50-question exam). The existing two-column
+parser ingested it unchanged once the id regex took the prefix. `ingest`/`validate`/
+`init_db`/`explain_batch` take `--qual advanced`; validate pins the Advanced size in
+`meta.expected_total`. `fetch_sources` fetches both banks; `install.sh` builds both
+DBs; `backup.py` snapshots both.
+
+**Parse verified exact against ISED's own data.** The user supplied ISED's delimited
+bank (`amat_adv_quest.zip` → `amat_adv_quest_delim.txt`; correct answer first). All
+549 stems, option sets and answer keys matched; the only diff was a parser artifact —
+words hyphenated across a PDF line break came out as "left- hand" (32 Advanced /
+34 Basic questions). `ingest._join` now re-joins those; both banks re-ingest clean
+and the Advanced parse is a character-for-character match. `validate` gained an
+exact cross-check against the delimited file whenever it is present
+(`fetch_sources` now pulls both zips). Re-ingesting Basic is cosmetic-only (same
+`bank_version`, attempts/explanations untouched).
+
+**Explanations — written in-session, no API spend.** 549 structured explanations
+(`seed/explanations_advanced.jsonl`, same schema as the Basic seed plus a new
+`worked_example` layer; median ~530 words/question vs ~300 for the Opus batch;
+every question has a worked numeric/derivation example, 490 carry edge cases). 16
+parallel writers from one brief, each chunk machine-validated (coverage, distractor
+letters = exactly the wrong options, link whitelist, no regulatory citations) and
+re-validated centrally. quiz.js renders `worked_example`; `DEPTH_LAYERS` reveals it
+at deep/unrated.
+
+**UI.** Topbar qualification switcher; `<html data-qual>` flips the accent to amber
+on Advanced (deep-tier shifts to rust so it stays distinguishable); the 80% bar is
+"Honours" on Basic and "target" on Advanced (`ui_config()` → `ElmerConfig`); exam
+verdicts/lines follow. Every link/fetch builds on `BASE`/`ElmerConfig.base`; quiz
+resume keys include the qualification. Each track serves its own webmanifest so both
+can live on the iPhone home screen. 7 original Advanced lessons
+(`app/content/sections_advanced/`), an Advanced formula set for the trainer, and the
+existing electronics/antenna tools mapped onto Advanced sections 1/2/7.
+
+**Verified:** smoke test extended with an `advanced()` block (isolation: an Advanced
+attempt lands only in the Advanced store, a B- id 404s on `/advanced`, 50-Q mock
+distribution, journal/recommendation paths, all 7 section pages + lessons);
+screenshots of dashboard/section/drill in the preview.
+
+**Deploy:** Python changed ⇒ `git pull && docker compose up -d --build`; on the LXC
+`deploy/install.sh` (re-run is safe) builds `hamstudy_advanced.db` from the bank +
+seed. Next: Advanced-specific concept tools (filters/Q, modulation envelope, Smith
+chart), and a per-track home-screen icon.

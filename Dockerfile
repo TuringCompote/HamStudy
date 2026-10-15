@@ -5,7 +5,10 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     HAMSTUDY_DB=/app/data/hamstudy.db \
     HAMSTUDY_RECOMMENDATION=/app/data/recommendation.json \
-    HAMSTUDY_JOURNAL=/app/data/journal
+    HAMSTUDY_JOURNAL=/app/data/journal \
+    HAMSTUDY_DB_ADVANCED=/app/data/hamstudy_advanced.db \
+    HAMSTUDY_RECOMMENDATION_ADVANCED=/app/data/recommendation_advanced.json \
+    HAMSTUDY_JOURNAL_ADVANCED=/app/data/journal_advanced
 
 WORKDIR /app
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-qual="{{ QUAL.code }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="{{ APP_NAME }}">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
   <link rel="icon" href="/static/icons/icon-192.png" type="image/png">
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="{{ BASE }}/manifest.webmanifest">
   <link rel="stylesheet" href="/static/tokens.css">
   <link rel="stylesheet" href="/static/style.css">
   <!-- single source of tier map + pass/honours bars (mastery.ui_config) -->
@@ -24,8 +24,15 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/">{{ APP_NAME }}</a>
-    <span class="tagline">Canadian Basic — targeting Honours ({{ UI_CONFIG.honours_bar | int }}%)</span>
+    <a class="brand" href="{{ BASE }}/">{{ APP_NAME }}</a>
+    <span class="tagline">{{ QUAL.tagline }}</span>
+    <!-- qualification switcher: each track is its own URL space + store -->
+    <nav class="qual-switch" aria-label="qualification">
+      {% for q in QUALS %}
+        <a class="qual-link{% if q.code == QUAL.code %} on{% endif %}"
+           href="{{ q.url_prefix }}/" {% if q.code == QUAL.code %}aria-current="page"{% endif %}>{{ q.label }}</a>
+      {% endfor %}
+    </nav>
   </header>
   <main class="container">
     {% block content %}{% endblock %}

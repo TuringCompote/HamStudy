@@ -13,7 +13,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
-from app import config
+from app import quals
 from app.engine import mastery, readiness as readiness_mod, scheduler, analysis, coach, diagnostic
 
 NEW_PER_SESSION = 15
@@ -98,8 +98,9 @@ def refresh(conn) -> dict:
     stamped = {"generated_at": datetime.now(timezone.utc).isoformat(), **rec}
 
     # always refresh the on-disk artifact (the app reads this back)
-    config.RECOMMENDATION_PATH.parent.mkdir(parents=True, exist_ok=True)
-    config.RECOMMENDATION_PATH.write_text(
+    rec_path = quals.current().recommendation_path
+    rec_path.parent.mkdir(parents=True, exist_ok=True)
+    rec_path.write_text(
         json.dumps(stamped, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 

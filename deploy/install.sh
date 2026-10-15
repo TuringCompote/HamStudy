@@ -6,13 +6,14 @@
 # What it does (Debian/Ubuntu LXC):
 #   1. installs Docker + the compose plugin (if missing)
 #   2. writes .env (port, optional Anthropic key) if absent
-#   3. builds the image and, on first run, reconstructs the DB:
-#      fetch the free ISED bank -> ingest 984 questions -> validate ->
-#      import the committed explanation seed (no paid re-batch)
+#   3. builds the image and, on first run, reconstructs the DBs (one per
+#      qualification): fetch the free ISED banks -> ingest -> validate ->
+#      import the committed explanation seeds (no paid re-batch)
 #   4. starts the container; prints the URL
 #
-# Re-running is safe: an existing data/hamstudy.db is preserved (your attempts +
-# explanations are never rebuilt). Override the port:  PORT=80 sudo ./deploy/install.sh
+# Re-running is safe: existing data/hamstudy.db / hamstudy_advanced.db are preserved
+# (your attempts + explanations are never rebuilt); a missing one is built.
+# Override the port:  PORT=80 sudo ./deploy/install.sh
 set -euo pipefail
 
 PORT="${PORT:-80}"
@@ -61,20 +62,29 @@ fi
 echo "==> Building image..."
 $DC build
 
-# --- 4. first-run DB build (preserve an existing DB) ---------------------------
+# --- 4. first-run DB build (preserve existing DBs) -----------------------------
+# One store per qualification: Basic (/) and Advanced (/advanced). References are
+# fetched + ingested in one ephemeral container; data/ is a volume so the DBs persist.
 mkdir -p data
-if [ ! -f data/hamstudy.db ]; then
-  echo "==> Building database (fetch bank -> ingest -> validate -> import explanations)..."
-  # one ephemeral container: references are fetched + ingested in the same run;
-  # data/ is a volume so the resulting DB persists.
-  $DC run --rm elmer sh -c "\
-    python -m app.db.fetch_sources && \
-    python -m app.db.ingest && \
-    python -m app.db.validate && \
-    python -m app.coaching.explain_batch import --path /app/seed/explanations.jsonl"
-else
-  echo "==> data/hamstudy.db exists — preserving it (no rebuild, no re-batch)"
+NEED_FETCH=0
+[ -f data/hamstudy.db ] || NEED_FETCH=1
+[ -f data/hamstudy_advanced.db ] || NEED_FETCH=1
+if [ "$NEED_FETCH" = 1 ]; then
+  echo "==> Fetching ISED source material..."
+  $DC run --rm elmer python -m app.db.fetch_sources
 fi
+for Q in basic advanced; do
+  DB="data/hamstudy.db"; [ "$Q" = advanced ] && DB="data/hamstudy_advanced.db"
+  if [ ! -f "$DB" ]; then
+    echo "==> Building ${Q} database (ingest -> validate -> import explanations)..."
+    $DC run --rm elmer sh -c "\
+      python -m app.db.ingest --qual ${Q} && \
+      python -m app.db.validate --qual ${Q} && \
+      python -m app.coaching.explain_batch --qual ${Q} import"
+  else
+    echo "==> ${DB} exists — preserving it (no rebuild, no re-batch)"
+  fi
+done
 
 # --- 5. up ---------------------------------------------------------------------
 echo "==> Starting Elmer..."
@@ -99,6 +109,7 @@ echo
 echo "==> Elmer is up. Reach it at:"
 echo "    http://${IP}:${PORT}"
 echo "    http://${FQDN}:${PORT}   (via your local DNS)"
+echo "    http://${FQDN}:${PORT}/advanced   (Advanced track — separate store)"
 echo
 echo "    health:  curl http://localhost:${PORT}/api/health"
 echo "    logs:    $SUDO docker compose logs -f"

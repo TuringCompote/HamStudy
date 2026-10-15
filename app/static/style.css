@@ -77,6 +77,21 @@ h2 { margin: var(--sp-5) 0 var(--sp-3); font-size: var(--fs-lg); }
   text-transform: uppercase; letter-spacing: 0.1em;
 }
 
+/* qualification switcher — two engraved keys on the right edge of the topbar */
+.qual-switch { margin-left: auto; display: inline-flex; gap: 2px; }
+.qual-link {
+  font-family: var(--font-display); font-weight: 500; font-size: var(--fs-xs);
+  text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none;
+  color: var(--muted); padding: 0.25rem 0.6rem;
+  border: var(--border-w) solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.qual-link.on {
+  color: var(--accent-ink); background: var(--accent); border-color: var(--accent-dim);
+  box-shadow: var(--glow);
+}
+@media (hover: hover) { .qual-link:not(.on):hover { color: var(--ink); border-color: var(--accent); } }
+
 .container { max-width: var(--maxw); margin: 0 auto; padding: var(--sp-5) var(--sp-4); }
 
 /* ---- machined panel surface (shared by all cards) ---- */

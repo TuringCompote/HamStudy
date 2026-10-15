@@ -15,7 +15,7 @@ from __future__ import annotations
 import math
 import random
 
-from app import timeutil
+from app import quals, timeutil
 from app.db import queries
 from app.engine.mastery import cold_params, cold_sql
 
@@ -27,7 +27,7 @@ TARGET_OFFSET = 1.10
 
 def compute_ability_difficulty(conn) -> tuple[dict[int, float], dict[str, float]]:
     """Replay attempts → (theta[section], difficulty_b[question_id]). Deterministic."""
-    theta = {s: 0.0 for s in range(1, 9)}
+    theta = {s: 0.0 for s in quals.current().sections}
     b: dict[str, float] = {}
     for r in conn.execute(
         "SELECT question_id, section, correct FROM attempts ORDER BY answered_at, id"

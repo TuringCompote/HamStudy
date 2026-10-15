@@ -9,13 +9,17 @@ from pathlib import Path
 
 import markdown as _md
 
-_DIR = Path(__file__).resolve().parent / "sections"
+from app import quals
 
 
-@lru_cache(maxsize=16)
 def lesson_html(section: int) -> str | None:
-    """Rendered HTML for a section's lesson, or None if no lesson file exists."""
-    path = _DIR / f"section{section}.md"
+    """Rendered HTML for the active qualification's lesson, or None if missing."""
+    return _lesson_html(quals.current().code, section)
+
+
+@lru_cache(maxsize=32)
+def _lesson_html(qual_code: str, section: int) -> str | None:
+    path = quals.get(qual_code).lessons_dir / f"section{section}.md"
     if not path.exists():
         return None
     text = path.read_text(encoding="utf-8")
