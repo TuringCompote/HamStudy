@@ -198,6 +198,80 @@ CTA, propagation/band-plan tools, webfonts loading; smoke test green.
 **Deploy note:** Python changed (`main.py`, `mastery.py`) ⇒
 `git pull && docker compose up -d --build` (not the UI-only pull+restart path).
 
+---
+
+## Fix — drill scores never moved (2026-08-12)
+
+**Report:** "I keep doing drills but all my scores don't change." Dashboard sat at
+70.6% readiness / 1-of-8 sections ready while the bank showed 972 of 984 seen.
+
+**Root cause (two bugs, one symptom).**
+
+1. **Fresh accuracy was terminal.** `mastery.compute_section_mastery` defined a
+   "fresh" attempt as a question's **first attempt ever** (`ROW_NUMBER() ... rn = 1`),
+   and every displayed number reads that field: the per-section S-meters, the depth
+   tiers, `readiness.coverage`, `analysis.section_trend`, the trend arrows, the
+   headline readiness %, `sections_ready`, and the blockers list. Once the bank had
+   been seen (98.8% here) the input to all of it was frozen history — the remaining
+   12 unseen questions could move the headline by at most ~1 point, so the 80%
+   Honours target was mathematically unreachable no matter how much studying happened.
+   Reproduced on a synthetic copy of that state: **800 consecutive perfect answers
+   moved readiness 71.1% → 71.6% and changed zero tiers.**
+2. **Drill selection was degenerate.** `adaptive.select_drill`'s primary sort key was
+   the RAW count of fresh attempts per subsection. That count also froze once
+   everything had been seen, so the smallest subsections sorted first *forever* and
+   each drill re-served the same ~20 questions: **5 consecutive drills in one section
+   touched 33 distinct questions out of 130**, and the rest was unreachable.
+
+Also fixed alongside: `coach.suggest_session` ranked the focus section by all-attempts
+`mastery_pct` while the dashboard ranked and displayed `fresh_pct`, so "Today's
+session" named a different weakest section than the S-meters showed (visible in the
+report: session said feedlines, meters said propagation).
+
+**Fix — "fresh" now means COLD RECALL.** An attempt is cold when it's a question's
+first ever *or* it lands ≥`config.FRESH_COOLDOWN_DAYS` (default 2, env-overridable)
+after that question's previous attempt; a section scores over each question's **most
+recent** cold attempt. That keeps the original intent — a re-answer minutes later
+tests recognition, not recall — while letting the number recover as questions are
+re-earned. Defined once in `mastery.cold_sql()`/`cold_params()` and consumed by
+mastery, readiness coverage, trend, fresh-vs-review and drill selection, so the
+definition can't drift across modules. Trend reads *all* cold attempts (it needs the
+sequence); mastery/coverage read the latest per question.
+
+Still deterministic (constitution §5): the cooldown compares two timestamps that are
+already in the attempt log — never the wall clock. Same `attempts` ⇒ same numbers.
+No LLM anywhere near this path. `attempts` untouched (append-only); this is a pure
+re-read of existing history, so the corrected numbers appear on the next page load
+with no migration.
+
+Selection now sorts: unprobed subsections → unseen → outstanding misses →
+least-recently-seen **local day** → productive-zone difficulty → id. Bucketing the
+coverage key (probed vs not, instead of a raw count) kills the permanent bias toward
+small subsections; the day-granularity recency key forces rotation while still
+letting θ-targeting order the material within a day.
+
+**Verification.** Same synthetic scenario after the fix: readiness 71.1% → 75.0%,
+sections ready 0 → 2, and 5 drills covered 100 of 130 distinct questions (was 33).
+New `tests/engine_test.py` (self-contained — synthetic bank in a temp DB, no `data/`
+required, never spends) pins all of it: cold recall recovers *and* decays, warm
+cramming is still ignored, the engine is idempotent, drills rotate, and the coach's
+focus matches the weakest dashboard row. Confirmed it fails on the pre-fix engine
+("fresh accuracy frozen at 50.0%") and passes after. `smoke_test.py` passes — and
+notably passed on the buggy code too, which is exactly why this shipped: it only ever
+asserted `fresh_pct` *exists*, never that it can move.
+
+**Deploy note:** Python changed (`config.py`, `mastery.py`, `readiness.py`,
+`analysis.py`, `adaptive.py`, `coach.py`) ⇒ `git pull && docker compose up -d --build`
+(not the UI-only pull+restart path).
+
+**Cooldown = 2 days** (user's call). Rationale: with a daily study habit and a fully
+seen bank, 2 days is the shortest window that still refuses to credit same-session
+and next-morning cramming, while letting roughly half the week's drilling land as
+real cold-recall evidence. It is a knob, not a constant —
+`HAMSTUDY_FRESH_COOLDOWN_DAYS=7` makes readiness a stricter (slower-moving) signal,
+`=1` makes daily drilling count immediately, `=0` reverts to first-exposure-only.
+Worth revisiting once there's a few weeks of post-fix data.
+
 ## 2026-10-12 — Phase 7: Advanced Qualification (separate track, same engine)
 
 User passed Basic **with Honours**; asked for Advanced "also available, but separate

@@ -8,6 +8,7 @@ pure over the attempt log — no LLM, no wall-clock, no randomness. The AI layer
 from __future__ import annotations
 
 from app import quals
+from app.engine.mastery import cold_params, cold_sql
 
 # A wrong answer faster than this reads as a confident misconception ("fast +
 # wrong"); slower reads as "not learned / guessing" ("slow + wrong"). ms.
@@ -16,16 +17,18 @@ TREND_DELTA = 8.0  # ±pct to call a section improving / regressing vs plateaued
 
 
 def _fresh_rows(conn):
-    """Each question's first attempt, in chronological order, with section + correct."""
+    """Every COLD attempt, in chronological order, with section + correct.
+
+    All of them, not just the latest per question: trend compares the earlier
+    half of a section's cold attempts against the later half, so it needs the
+    sequence. (Keying on first-exposure-only froze every section's trend the
+    moment the bank had been seen once.)"""
     return conn.execute(
-        """
-        SELECT section, subsection, question_id, correct, answered_at FROM (
-            SELECT section, subsection, question_id, correct, answered_at,
-                   ROW_NUMBER() OVER (
-                       PARTITION BY question_id ORDER BY answered_at, id) rn
-            FROM attempts
-        ) WHERE rn = 1 ORDER BY answered_at
-        """
+        cold_sql(
+            "SELECT section, subsection, question_id, correct, answered_at "
+            "FROM cold ORDER BY answered_at, id"
+        ),
+        cold_params(),
     ).fetchall()
 
 
@@ -57,20 +60,20 @@ def section_trend(conn) -> dict[int, str]:
 
 
 def fresh_vs_review(conn) -> dict[int, dict]:
-    """Per section: fresh accuracy (first attempts) vs review accuracy (repeats)."""
+    """Per section: cold accuracy (fresh probes) vs warm accuracy (repeats inside
+    the cooldown — i.e. the same material seen again while it's still hot)."""
     rows = conn.execute(
-        """
-        SELECT section,
-               SUM(CASE WHEN rn = 1 THEN 1 ELSE 0 END)                       AS fresh_n,
-               SUM(CASE WHEN rn = 1 THEN correct ELSE 0 END)                 AS fresh_c,
-               SUM(CASE WHEN rn > 1 THEN 1 ELSE 0 END)                       AS rev_n,
-               SUM(CASE WHEN rn > 1 THEN correct ELSE 0 END)                 AS rev_c
-        FROM (
-            SELECT section, correct,
-                   ROW_NUMBER() OVER (PARTITION BY question_id ORDER BY answered_at, id) rn
-            FROM attempts
-        ) GROUP BY section
-        """
+        cold_sql(
+            """
+            SELECT section,
+                   SUM(is_cold)                                        AS fresh_n,
+                   SUM(CASE WHEN is_cold = 1 THEN correct ELSE 0 END)  AS fresh_c,
+                   SUM(1 - is_cold)                                    AS rev_n,
+                   SUM(CASE WHEN is_cold = 0 THEN correct ELSE 0 END)  AS rev_c
+            FROM flagged GROUP BY section
+            """
+        ),
+        cold_params(),
     ).fetchall()
     out = {}
     for r in rows:

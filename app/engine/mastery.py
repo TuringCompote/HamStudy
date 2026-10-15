@@ -10,12 +10,35 @@ Definitions (v1):
   mastery_pct   = 100 * correct / answered     (None if never answered)
   coverage_pct  = 100 * distinct questions attempted / section size
   seen          = distinct questions attempted
+  fresh_pct     = COLD-RECALL accuracy — see below. This is what the dashboard,
+                  the depth tiers and readiness (spec §8) are driven by.
 The Honours bar is 80% (spec §0.1); 70% is a pass.
+
+Cold recall (why "fresh" is not "first attempt ever")
+-----------------------------------------------------
+"Fresh" exists to measure recall on an exam-like cold start, not recognition of
+something drilled minutes ago. v1 implemented that as *the first attempt a
+question ever got* — which silently makes the metric terminal: once the bank has
+been seen, every later attempt is excluded, so fresh accuracy (and therefore the
+tiers, the trend and readiness) can never move again no matter how much the user
+studies. Honours became unreachable by construction.
+
+An attempt is COLD when it is a question's first-ever attempt, or it lands at
+least `config.FRESH_COOLDOWN_DAYS` after the previous attempt on that question.
+A section's fresh accuracy is taken over each question's MOST RECENT cold
+attempt, so it reads as "if the exam were today, how much do I actually recall?"
+and recovers as the user re-earns each question after the cooldown.
+
+Still deterministic (constitution §5): the cooldown is measured between two
+timestamps that are already in the log, never against the wall clock. Same
+`attempts` + same config ⇒ same numbers.
 """
 from __future__ import annotations
 
-from app import quals
+from app import config, quals
 from app.db.queries import section_names, section_short_names
+
+FRESH_COOLDOWN_DAYS = config.FRESH_COOLDOWN_DAYS
 
 HONOURS_BAR = 80.0
 PASS_BAR = 70.0
@@ -43,6 +66,7 @@ def ui_config() -> dict:
         "honours_bar": HONOURS_BAR,
         "tier_css": TIER_CSS,
         "tiers": tiers,
+        "fresh_cooldown_days": FRESH_COOLDOWN_DAYS,
         # qualification context (the UI never hardcodes these)
         "qual": q.code,
         "qual_label": q.label,
@@ -52,6 +76,53 @@ def ui_config() -> dict:
         "exam_size": q.exam_size,
         "section_count": q.section_count,
     }
+
+
+def cold_sql(tail: str, *, before: bool = False) -> str:
+    """Wrap `tail` in the shared cold-attempt CTEs. THE single definition of
+    "fresh" in the engine — mastery, readiness coverage, trend and drill
+    selection all read through this so they can never drift apart.
+
+    Exposes two relations to `tail`:
+      flagged — every attempt, with `is_cold` (1/0) and `prev_at`
+      cold    — the cold attempts only, with `cold_rn` = 1 on each question's
+                MOST RECENT cold attempt
+
+    `before=True` adds a leading `?` placeholder restricting the log to attempts
+    strictly earlier than that instant (mastery-as-it-stood-then). Bind params
+    with `cold_params(before)`.
+    """
+    cond = "WHERE answered_at < ?" if before else ""
+    return f"""
+        WITH marked AS (
+            SELECT id, question_id, section, subsection, correct, answered_at,
+                   response_ms, mode,
+                   LAG(answered_at) OVER (
+                       PARTITION BY question_id ORDER BY answered_at, id) AS prev_at
+            FROM attempts
+            {cond}
+        ),
+        flagged AS (
+            SELECT *,
+                   CASE WHEN prev_at IS NULL
+                         OR julianday(answered_at) - julianday(prev_at) >= ?
+                        THEN 1 ELSE 0 END AS is_cold
+            FROM marked
+        ),
+        cold AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY question_id ORDER BY answered_at DESC, id DESC
+                   ) AS cold_rn
+            FROM flagged WHERE is_cold = 1
+        )
+        {tail}
+    """
+
+
+def cold_params(before: str | None = None) -> tuple:
+    """Bind params for `cold_sql(..., before=bool(before))` — order matters."""
+    return (before, FRESH_COOLDOWN_DAYS) if before else (FRESH_COOLDOWN_DAYS,)
 
 
 def depth_tier(pct: float | None) -> str | None:
@@ -115,22 +186,16 @@ def compute_section_mastery(conn, before: str | None = None) -> dict[int, dict]:
             params,
         ).fetchall()
     }
-    # FRESH stats: each question's FIRST attempt only (first-exposure accuracy).
+    # FRESH stats: each question's MOST RECENT COLD attempt (see module docstring).
     fresh = {
         r["section"]: r
         for r in conn.execute(
-            f"""
-            SELECT section, COUNT(*) AS fa, SUM(correct) AS fc FROM (
-                SELECT section, correct,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY question_id ORDER BY answered_at, id
-                       ) rn
-                FROM attempts
-                {cond}
-            ) WHERE rn = 1
-            GROUP BY section
-            """,
-            params,
+            cold_sql(
+                "SELECT section, COUNT(*) AS fa, SUM(correct) AS fc "
+                "FROM cold WHERE cold_rn = 1 GROUP BY section",
+                before=bool(before),
+            ),
+            cold_params(before),
         ).fetchall()
     }
 

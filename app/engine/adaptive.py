@@ -15,8 +15,9 @@ from __future__ import annotations
 import math
 import random
 
-from app import quals
+from app import quals, timeutil
 from app.db import queries
+from app.engine.mastery import cold_params, cold_sql
 
 K_THETA = 0.30   # ability step per answer
 K_B = 0.15       # difficulty step per answer (questions drift slower than ability)
@@ -49,12 +50,22 @@ def select_drill(conn, section: int, count: int,
     """θ-aware, coverage-aware, deterministic drill selection for one section.
 
     Priority (ascending sort key, so smallest first):
-      1. how many fresh attempts the question's subsection already has (pull
-         forward under-probed subsections)
+      1. subsections with no cold probe at all (close real blind spots first)
       2. unseen before seen (new material first)
-      3. closeness of difficulty b to the productive-zone target (θ - offset)
-      4. id (stable tiebreak)
+      3. outstanding misses — questions whose last answer was wrong
+      4. least-recently-seen LOCAL day (rotation: this is what stops a drill from
+         re-serving the same handful of questions every session)
+      5. closeness of difficulty b to the productive-zone target (θ - offset)
+      6. id (stable tiebreak)
     Cold start (no attempts in the section) → random sample for variety.
+
+    Key 1 used to be the RAW count of fresh attempts per subsection. Once the
+    bank had been seen, those counts froze, so the smallest subsections sorted
+    first forever and the drill served the same ~20 questions on every run —
+    the rest of the section was unreachable. Bucketing it to probed/unprobed and
+    rotating on last-seen day fixes that while keeping the coverage intent.
+    Key 4 is a DAY, not a timestamp, so the productive-zone ordering still
+    decides within a day's worth of material.
     """
     rng = rng or random.Random()
     pool = conn.execute(
@@ -72,20 +83,32 @@ def select_drill(conn, section: int, count: int,
         ids = [r["id"] for r in pool]
         return rng.sample(ids, min(count, len(ids)))
 
-    # fresh attempts per subsection (for coverage pull-forward)
-    sub_fresh = {
-        r["subsection"]: r["n"]
+    # subsections that have been cold-probed at least once (coverage pull-forward)
+    probed_subs = {
+        r["subsection"]
+        for r in conn.execute(
+            # tail placeholders bind after the CTE's own — hence params + (section,)
+            cold_sql("SELECT DISTINCT subsection FROM cold WHERE section = ?"),
+            cold_params() + (section,),
+        ).fetchall()
+    }
+
+    # per question: most recent attempt (local day) and whether it was wrong
+    last = {
+        r["question_id"]: r
         for r in conn.execute(
             """
-            SELECT subsection, COUNT(*) n FROM (
-                SELECT subsection, ROW_NUMBER() OVER (
-                    PARTITION BY question_id ORDER BY answered_at, id) rn
+            SELECT question_id, answered_at, correct FROM (
+                SELECT question_id, answered_at, correct,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY question_id ORDER BY answered_at DESC, id DESC) rn
                 FROM attempts WHERE section = ?
-            ) WHERE rn = 1 GROUP BY subsection
+            ) WHERE rn = 1
             """,
             (section,),
         ).fetchall()
     }
+    last_day = {q: timeutil.local_day(r["answered_at"]) for q, r in last.items()}
 
     theta, b = compute_ability_difficulty(conn)
     target_b = theta.get(section, 0.0) - TARGET_OFFSET
@@ -93,8 +116,10 @@ def select_drill(conn, section: int, count: int,
     def key(row):
         qid, sub = row["id"], row["subsection"]
         return (
-            sub_fresh.get(sub, 0),
+            1 if sub in probed_subs else 0,
             0 if qid not in seen else 1,
+            0 if (qid in last and not last[qid]["correct"]) else 1,
+            last_day.get(qid, ""),
             abs(b.get(qid, 0.0) - target_b),
             qid,
         )

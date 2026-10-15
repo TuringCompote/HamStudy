@@ -96,12 +96,23 @@ def suggest_session(conn, by_section: dict | None = None) -> dict:
             "focus_section": None,
         }
 
-    weakest = sorted(studied, key=lambda s: s["mastery_pct"] if s["mastery_pct"] is not None else 0.0)
+    # Rank by FRESH accuracy — the same number the dashboard rows, the tiers and
+    # readiness.weakest_sections use. Ranking by all-attempts mastery_pct made the
+    # coach name a different "weakest section" than the one the S-meters showed.
+    weakest = sorted(
+        studied,
+        key=lambda s: (s["fresh_pct"] if s["fresh_pct"] is not None else 0.0,
+                       s["mastery_pct"] if s["mastery_pct"] is not None else 0.0),
+    )
     focus = weakest[0]
     tools = tools_for_section(focus["section"])
     due = scheduler.review_due_count(conn)
 
-    detail = f"15 new in {focus['short'].lower()}"
+    # "new" is only honest while the section still has unseen questions; past that
+    # a session is cold-recall re-probing, and saying "new" reads as a broken app.
+    unseen = focus["size"] - focus["seen"]
+    detail = (f"15 new in {focus['short'].lower()}" if unseen >= 15
+              else f"15 cold-recall in {focus['short'].lower()}")
     if due:
         detail += f", {due} due for review"
     if tools:
