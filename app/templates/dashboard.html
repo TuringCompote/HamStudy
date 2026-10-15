@@ -14,7 +14,7 @@
     </span>
     <div>
       <div class="app-name">{{ APP_NAME }}</div>
-      <div class="muted small">Basic with honours · target {{ summary.honours_bar | int }}%</div>
+      <div class="muted small">{{ QUAL.label }}{% if QUAL.honours %} with honours{% endif %} · target {{ summary.honours_bar | int }}%</div>
     </div>
   </div>
   <div class="readiness">
@@ -35,10 +35,19 @@
   </div>
 </header>
 
+{% if not summary.bank_size %}
+<section class="session-card">
+  <div class="session-head"><span class="session-icon" aria-hidden="true">◎</span> No {{ QUAL.label }} bank yet</div>
+  <p class="session-detail">This track's question bank hasn't been ingested. From the repo:
+    <code class="mono">python -m app.db.fetch_sources && python -m app.db.ingest --qual {{ QUAL.code }}
+    && python -m app.db.validate --qual {{ QUAL.code }} && python -m app.coaching.explain_batch --qual {{ QUAL.code }} import</code></p>
+</section>
+{% endif %}
+
 <section class="stat-cards">
   <div class="stat">
     <div class="stat-label">Sections ready</div>
-    <div class="stat-val mono">{{ summary.sections_ready }} / 8</div>
+    <div class="stat-val mono">{{ summary.sections_ready }} / {{ QUAL.section_count }}</div>
   </div>
   <div class="stat">
     <div class="stat-label">Day streak</div>
@@ -75,12 +84,12 @@
   <p class="session-detail">{{ session.rationale }}</p>
   <div class="card-actions">
     {% if session.focus_section %}
-      <a class="btn btn-primary" href="/section/{{ session.focus_section }}">Start session ↗</a>
+      <a class="btn btn-primary" href="{{ BASE }}/section/{{ session.focus_section }}">Start session ↗</a>
     {% else %}
-      <a class="btn btn-primary" href="/quiz?mode=exam">Start a mock exam ↗</a>
+      <a class="btn btn-primary" href="{{ BASE }}/quiz?mode=exam">Start a mock exam ↗</a>
     {% endif %}
     {% if summary.review_due %}
-      <a class="btn" href="/quiz?mode=review">Review {{ summary.review_due }} due</a>
+      <a class="btn" href="{{ BASE }}/quiz?mode=review">Review {{ summary.review_due }} due</a>
     {% endif %}
   </div>
 </section>
@@ -88,7 +97,7 @@
 <section class="mastery-list">
   <h2 class="caps muted small">Per-section mastery</h2>
   {% for s in sections.values() %}
-  <a class="mrow" href="/section/{{ s.section }}">
+  <a class="mrow" href="{{ BASE }}/section/{{ s.section }}">
     <span class="mrow-name">{{ s.short }}{% if s.fast_wrong %}<span class="lamp lamp-warn"
       title="{{ s.fast_wrong }} confident-but-wrong (answered fast, missed) — likely misconception"></span>{% endif %}</span>
     <span class="smeter mrow-meter" title="fresh: {{ s.fresh_correct }}/{{ s.fresh_answered }} correct">
@@ -111,9 +120,9 @@
 </section>
 
 <section class="dash-links">
-  <a class="btn" href="/quiz?mode=exam">100-question mock exam</a>
-  {% if summary.review_due %}<a class="btn" href="/quiz?mode=review">Review ({{ summary.review_due }} due)</a>{% endif %}
-  <a class="btn" href="/formula-trainer">Formula-sheet trainer</a>
+  <a class="btn" href="{{ BASE }}/quiz?mode=exam">{{ QUAL.exam_size }}-question mock exam</a>
+  {% if summary.review_due %}<a class="btn" href="{{ BASE }}/quiz?mode=review">Review ({{ summary.review_due }} due)</a>{% endif %}
+  <a class="btn" href="{{ BASE }}/formula-trainer">Formula-sheet trainer</a>
 </section>
 {% endblock %}
 {% block scripts %}

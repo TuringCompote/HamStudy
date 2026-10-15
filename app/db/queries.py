@@ -8,32 +8,18 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+from app import quals
 from app.db.init_db import connect
 
-# The 8 official syllabus sections (spec §4). Names are ours (original), used
-# for navigation labels only — not lesson content.
-SECTION_NAMES = {
-    1: "Regulations and Policies",
-    2: "Operating and Procedures",
-    3: "Station Assembly, Practice and Safety",
-    4: "Circuit Components",
-    5: "Basic Electronics and Theory",
-    6: "Feedlines and Antenna Systems",
-    7: "Radio Wave Propagation",
-    8: "Interference and Suppression",
-}
+# Section names live on the qualification profile (app/quals.py) — Basic has 8
+# sections, Advanced 7 — and are resolved per request. Names are ours (original),
+# used for navigation labels only, not lesson content.
+def section_names() -> dict[int, str]:
+    return quals.current().section_names
 
-# compact labels for the dashboard rows (matches the design mockup)
-SECTION_SHORT_NAMES = {
-    1: "Regulations & policies",
-    2: "Operating & procedures",
-    3: "Station assembly & safety",
-    4: "Circuit components",
-    5: "Basic electronics & theory",
-    6: "Feedlines & antennas",
-    7: "Radio wave propagation",
-    8: "Interference & suppression",
-}
+
+def section_short_names() -> dict[int, str]:
+    return quals.current().section_short
 
 
 def _row_to_question(row, *, with_answer: bool = False) -> dict:

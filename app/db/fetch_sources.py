@@ -6,7 +6,7 @@ this script makes re-fetching reproducible. English-only (QUESTIONS #12).
 Usage:
     python -m app.db.fetch_sources
 
-All URLs verified live 2026-06-13. The bank PDF is the only Phase-1 hard
+All URLs verified live 2026-06-13 (banks + delimited zips re-verified 2026-10-12). The bank PDF is the only Phase-1 hard
 requirement; the rest feed Phase 4 (formula trainer) and Phase 5 (AI reference
 layer). Failures are reported, not fatal.
 """
@@ -30,6 +30,22 @@ SOURCES = {
     "Basic question bank (REQUIRED)": (
         "https://apc-cap.ic.gc.ca/datafiles/amateur_basic_questions_en.pdf",
         "amateur_basic_questions_en.pdf", "pdf",
+    ),
+    # REQUIRED for the Advanced track (Phase 7) — same layout, A- ids, 7 sections.
+    "Advanced question bank (REQUIRED for /advanced)": (
+        "https://apc-cap.ic.gc.ca/datafiles/amateur_advanced_questions_en.pdf",
+        "amateur_advanced_questions_en.pdf", "pdf",
+    ),
+    # ISED's machine-readable delimited banks (";"-separated, EN+FR, correct answer
+    # first). Not the ingest source (the PDF stays ground truth) — `validate`
+    # cross-checks every stem/option/key against these when present.
+    "Basic bank, delimited (validation)": (
+        "https://apc-cap.ic.gc.ca/datafiles/amat_basic_quest.zip",
+        "amat_basic_quest.zip", "zip",
+    ),
+    "Advanced bank, delimited (validation)": (
+        "https://apc-cap.ic.gc.ca/datafiles/amat_adv_quest.zip",
+        "amat_adv_quest.zip", "zip",
     ),
     # Formula/block-diagram sheets: labelled (study) + unlabelled (exam-legal).
     # Real path is sites/default/files/documents/ (note the trailing space in name).

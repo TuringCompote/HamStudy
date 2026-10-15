@@ -7,6 +7,8 @@ pure over the attempt log — no LLM, no wall-clock, no randomness. The AI layer
 """
 from __future__ import annotations
 
+from app import quals
+
 # A wrong answer faster than this reads as a confident misconception ("fast +
 # wrong"); slower reads as "not learned / guessing" ("slow + wrong"). ms.
 FAST_WRONG_MS = 8000
@@ -35,7 +37,7 @@ def section_trend(conn) -> dict[int, str]:
         by_sec.setdefault(r["section"], []).append(r["correct"])
 
     out: dict[int, str] = {}
-    for section in range(1, 9):
+    for section in quals.current().sections:
         seq = by_sec.get(section, [])
         if len(seq) < 6:
             out[section] = "new"

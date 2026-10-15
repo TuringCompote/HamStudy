@@ -32,6 +32,17 @@ _tmpdir = tempfile.mkdtemp(prefix="hamstudy_smoke_")
 config.JOURNAL_DIR = config.Path(_tmpdir) / "journal"
 config.RECOMMENDATION_PATH = config.Path(_tmpdir) / "recommendation.json"
 
+# Advanced track (Phase 7): its own disposable copy — the two stores never mix.
+_HAVE_ADV = config.DB_PATH_ADVANCED.exists()
+if _HAVE_ADV:
+    _tmp_adv = os.path.join(tempfile.gettempdir(), "hamstudy_smoke_advanced.db")
+    shutil.copy(config.DB_PATH_ADVANCED, _tmp_adv)
+    config.DB_PATH_ADVANCED = config.Path(_tmp_adv)
+else:
+    config.DB_PATH_ADVANCED = config.Path(_tmpdir) / "advanced_empty.db"
+config.JOURNAL_DIR_ADVANCED = config.Path(_tmpdir) / "journal_advanced"
+config.RECOMMENDATION_PATH_ADVANCED = config.Path(_tmpdir) / "recommendation_advanced.json"
+
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
@@ -243,7 +254,96 @@ def main() -> None:
         assert content.lesson_html(s), f"missing lesson for section {s}"
 
     conn.close()
+
+    advanced()
     print("\nALL SMOKE CHECKS PASSED")
+
+
+def advanced() -> None:
+    """The Advanced track: same engine, separate URL space + store. Every
+    assertion here is the mirror of a Basic one above, through `/advanced`."""
+    from app import quals
+    from app.db.init_db import connect as _connect
+
+    h = c.get("/advanced/api/health").json()
+    print("advanced health:", h)
+    assert h["qual"] == "advanced" and h["sections"] == 7 and h["exam_size"] == 50
+    assert c.get("/advanced", follow_redirects=False).status_code == 307
+    page = c.get("/advanced/")
+    assert page.status_code == 200 and 'data-qual="advanced"' in page.text
+    assert "/advanced/quiz?mode=exam" in page.text          # links stay in the track
+    assert "qual-switch" in page.text and "qual-link on" in page.text
+    # Basic pages must not link into the Advanced space and vice versa
+    assert "/advanced/section/" not in c.get("/").text
+
+    if not _HAVE_ADV:
+        print("advanced: bank not ingested here — structural checks only "
+              "(python -m app.db.ingest --qual advanced to enable the full run)")
+        assert "No Advanced bank yet" in page.text
+        return
+
+    # isolation: the stores are different files with different banks
+    assert h["questions"] > 0 and h["questions"] != 984
+    assert config.DB_PATH_ADVANCED != config.DB_PATH
+
+    dq = c.post("/advanced/api/quiz", json={"mode": "drill", "section": 1, "count": 10}).json()
+    assert dq["count"] == 10 and all("correct_index" not in q for q in dq["questions"])
+    assert all(q["id"].startswith("A-") and q["section"] == 1 for q in dq["questions"])
+
+    mq = c.post("/advanced/api/quiz", json={"mode": "exam"}).json()
+    dist = collections.Counter(q["section"] for q in mq["questions"])
+    print("advanced mock:", mq["count"], "questions; section dist:", dict(sorted(dist.items())))
+    assert mq["count"] == 50 and set(dist) <= set(range(1, 8))
+    assert all("correct_index" not in q for q in mq["questions"]), "ANSWER LEAKED (adv exam)"
+    assert c.post("/advanced/api/quiz", json={"mode": "drill", "section": 8}).status_code == 404
+
+    # an Advanced attempt lands ONLY in the Advanced store
+    tok = quals.activate("advanced")
+    try:
+        aconn = _connect()
+        qid = dq["questions"][0]["id"]
+        ci = aconn.execute("SELECT correct_index FROM questions WHERE id=?", (qid,)).fetchone()["correct_index"]
+        a_before = aconn.execute("SELECT COUNT(*) c FROM attempts").fetchone()["c"]
+    finally:
+        quals.reset(tok)
+    bconn = _connect()                                   # Basic store (default context)
+    b_before = bconn.execute("SELECT COUNT(*) c FROM attempts").fetchone()["c"]
+    r = c.post("/advanced/api/attempt", json={"question_id": qid, "chosen_index": (ci + 1) % 4,
+                                              "mode": "drill", "response_ms": 2000}).json()
+    assert r["correct"] is False
+    assert bconn.execute("SELECT COUNT(*) c FROM attempts").fetchone()["c"] == b_before
+    assert aconn.execute("SELECT COUNT(*) c FROM attempts").fetchone()["c"] == a_before + 1
+    # and a Basic id is unknown to the Advanced track
+    assert c.post("/advanced/api/attempt", json={"question_id": "B-001-001-001",
+                                                 "chosen_index": 0, "mode": "drill"}).status_code == 404
+
+    # explanations: the committed Advanced seed (deeper layers incl. worked_example)
+    ex = c.post("/advanced/api/explain", json={"question_id": qid, "chosen_index": 0}).json()
+    if ex["source"] == "batch":
+        assert ex["layers"]["core"] and ex["layers"]["distractors"]
+    have = aconn.execute("SELECT COUNT(*) c FROM explanations").fetchone()["c"]
+    print("advanced explanations stored:", have, "/", h["questions"])
+
+    # journal + recommendation go to the Advanced paths, section pages render
+    jr = c.post("/advanced/api/journal").json()
+    assert Path(jr["path"]).parent == config.JOURNAL_DIR_ADVANCED
+    assert "(Advanced)" in Path(jr["path"]).read_text(encoding="utf-8")
+    assert config.RECOMMENDATION_PATH_ADVANCED.exists()
+    for s in range(1, 8):
+        assert c.get(f"/advanced/section/{s}").status_code == 200, s
+    assert c.get("/advanced/section/8").status_code == 404
+    assert "Advanced theory" in c.get("/advanced/").text
+    ft = c.get("/advanced/formula-trainer")
+    assert ft.status_code == 200 and "Carson" in ft.text
+    from app import content
+    tok = quals.activate("advanced")
+    try:
+        missing = [s for s in range(1, 8) if not content.lesson_html(s)]
+    finally:
+        quals.reset(tok)
+    assert not missing, f"missing Advanced lesson(s): {missing}"
+    aconn.close(); bconn.close()
+    print("advanced: OK")
 
 
 if __name__ == "__main__":

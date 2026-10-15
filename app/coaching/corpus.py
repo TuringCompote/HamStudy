@@ -16,7 +16,7 @@ import html
 import re
 from functools import lru_cache
 
-from app import config
+from app import config, quals
 
 _CORPUS_DIR = config.REFERENCES_DIR / "_corpus"
 _GROUND_MAX_CHARS = 20000  # ~5k tokens — bounded cost, above the prompt-cache minimum
@@ -28,11 +28,8 @@ _SOURCES = {
     "RIC-1.html": "ric1.txt",
 }
 
-# section -> corpus files used for grounding (regs-heavy sections only)
-_SECTION_GROUNDING = {
-    1: ["rbr4.txt", "ric3.txt"],   # Regulations and Policies
-    2: ["ric3.txt"],               # Operating and Procedures
-}
+# section -> corpus files used for grounding is a property of the qualification
+# (app/quals.py; Basic grounds its two regs-heavy sections, Advanced has none).
 
 
 def _html_to_text(raw: str) -> str:
@@ -77,7 +74,7 @@ def _load(out_name: str) -> str:
 
 def ground_for_section(section: int) -> str:
     """Grounding text for a section, or '' if none. Builds the corpus on demand."""
-    files = _SECTION_GROUNDING.get(section)
+    files = quals.current().grounding.get(section)
     if not files:
         return ""
     if not _CORPUS_DIR.exists():

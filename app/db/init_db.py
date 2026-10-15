@@ -11,12 +11,16 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timezone
 
-from app import config
+from app import config, quals
 
 
 def connect(db_path=None) -> sqlite3.Connection:
-    """Open a connection with sane pragmas and row access by name."""
-    path = db_path or config.DB_PATH
+    """Open a connection with sane pragmas and row access by name.
+
+    With no explicit path, opens the ACTIVE qualification's store
+    (`quals.current().db_path`) — Basic by default, Advanced inside the
+    `/advanced` URL space or after `quals.activate("advanced")` in a script."""
+    path = db_path or quals.current().db_path
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
@@ -44,6 +48,10 @@ def init_db(db_path=None) -> sqlite3.Connection:
 
 
 if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser(description="Apply the schema (idempotent).")
+    quals.add_cli_arg(ap)
+    quals.activate(ap.parse_args().qual)
     conn = init_db()
     tables = [
         r[0]
@@ -51,5 +59,5 @@ if __name__ == "__main__":
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
         ).fetchall()
     ]
-    print(f"schema applied to {config.DB_PATH}")
+    print(f"schema applied to {quals.current().db_path}")
     print("tables:", ", ".join(tables))

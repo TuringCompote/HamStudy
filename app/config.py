@@ -61,6 +61,25 @@ BANK_PDF = Path(
     os.environ.get("HAMSTUDY_BANK_PDF", REFERENCES_DIR / "amateur_basic_questions_en.pdf")
 )
 
+# --- Advanced Qualification (Phase 7): a SEPARATE store, tracked separately -----
+# Same schema, its own SQLite file / recommendation.json / journal folder, so no
+# Basic and Advanced state ever mixes. The active profile is chosen per request
+# by the URL space (`/` vs `/advanced`) — see app/quals.py.
+DB_PATH_ADVANCED = Path(
+    os.environ.get("HAMSTUDY_DB_ADVANCED", ROOT / "data" / "hamstudy_advanced.db")
+)
+BANK_PDF_ADVANCED = Path(
+    os.environ.get("HAMSTUDY_BANK_PDF_ADVANCED",
+                   REFERENCES_DIR / "amateur_advanced_questions_en.pdf")
+)
+RECOMMENDATION_PATH_ADVANCED = Path(
+    os.environ.get("HAMSTUDY_RECOMMENDATION_ADVANCED",
+                   ROOT / "data" / "recommendation_advanced.json")
+)
+JOURNAL_DIR_ADVANCED = Path(
+    os.environ.get("HAMSTUDY_JOURNAL_ADVANCED", ROOT / "data" / "journal_advanced")
+)
+
 # Schema lives beside this module.
 SCHEMA_SQL = Path(__file__).resolve().parent / "db" / "schema.sql"
 

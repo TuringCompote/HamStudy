@@ -1,7 +1,7 @@
 """Deterministic readiness + coverage guarantee (spec §6d.4, constitution §8).
 
 "Book the exam" fires only when BOTH hold:
-  1. fresh-question accuracy ≥ 80% (Honours) in every one of the 8 sections, AND
+  1. fresh-question accuracy ≥ 80% (Honours / target) in EVERY section, AND
   2. every subsection has been probed with a fresh question (coverage), so a
      strong section is verified, not assumed.
 
@@ -9,6 +9,7 @@ Pure over `attempts` + `questions`. Fresh = a question's first-ever attempt.
 """
 from __future__ import annotations
 
+from app import quals
 from app.engine.mastery import compute_section_mastery, HONOURS_BAR
 
 
@@ -41,7 +42,7 @@ def coverage(conn) -> dict:
 
     out = {}
     tot_sub = cov_sub = 0
-    for section in range(1, 9):
+    for section in quals.current().sections:
         t = total.get(section, 0)
         c = covered.get(section, 0)
         tot_sub += t
@@ -66,7 +67,7 @@ def readiness(conn, by_section: dict | None = None) -> dict:
     cov = coverage(conn)
 
     sections_honours = sum(1 for s in by_section.values() if s["meets_honours"])
-    all_honours = sections_honours == 8
+    all_honours = sections_honours == quals.current().section_count
     coverage_complete = cov[0]["overall_complete"]
     exam_ready = all_honours and coverage_complete
 
